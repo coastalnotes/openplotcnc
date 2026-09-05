@@ -8,7 +8,7 @@ import { Animator } from './render/animator';
 import { mountTransport } from './playback/controls';
 import { ConfigPanel } from './config/configPanel';
 import { Ribbon, type RibbonAction } from './ui/ribbon';
-import { parseMultiChannel } from '../src/parser';
+import { parseMultiChannel, expandSubprograms } from '../src/parser';
 import { alignChannels } from '../src/channels/alignment';
 import { buildSchedule, type Schedule } from '../src/simulation/timeline';
 import { channelSpace } from '../src/kinematics/swissTransform';
@@ -21,6 +21,16 @@ let setup: SetupConfig = defaultSetup();
 let schedule: Schedule | undefined;
 let backplotActive = false;
 let liveTimer: number | undefined;
+let subprograms = new Map<number, string>();
+
+/** Channel texts with `M98` subprogram calls expanded, for parsing/backplot. */
+function resolvedTexts() {
+  return editor.channelTexts().map((t) => ({
+    channel: t.channel,
+    name: t.name,
+    source: expandSubprograms(t.source, subprograms),
+  }));
+}
 
 const canvas = el<HTMLCanvasElement>('scene');
 const scene = new SceneManager(canvas);
@@ -96,12 +106,9 @@ function onRibbon(a: RibbonAction): void {
 
 /* ---- backplot lifecycle (manual) ---- */
 function runBackplot(): void {
-  const texts = editor.channelTexts();
+  const texts = resolvedTexts();
   if (texts.length === 0) return;
-  const program = parseMultiChannel(
-    texts.map((t) => ({ channel: t.channel, name: t.name, source: t.source })),
-    { dialect: setup.machine.dialect }
-  );
+  const program = parseMultiChannel(texts, { dialect: setup.machine.dialect });
   schedule = buildSchedule(program, setup);
   scene.setToolpaths(schedule.channels);
   scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
@@ -172,6 +179,7 @@ onHostMessage((msg: HostToWebview) => {
   switch (msg.type) {
     case 'init':
       setup = msg.setup;
+      subprograms = toSubMap(msg.subprograms);
       config.setSetup(setup);
       applyTheme(msg.theme);
       editor.setChannels(msg.channels, setup.machine.dialect);
@@ -180,6 +188,7 @@ onHostMessage((msg: HostToWebview) => {
       if (backplotActive) runBackplot();
       break;
     case 'channels':
+      subprograms = toSubMap(msg.subprograms);
       editor.setChannels(msg.channels, setup.machine.dialect);
       updateChannelsInfo();
       if (backplotActive) runBackplot();
@@ -218,17 +227,15 @@ function applySetup(): void {
 }
 
 function updateChannelsInfo(): void {
-  const texts = editor.channelTexts();
-  const program = parseMultiChannel(
-    texts.map((t) => ({ channel: t.channel, name: t.name, source: t.source })),
-    { dialect: setup.machine.dialect }
-  );
+  const texts = resolvedTexts();
+  const program = parseMultiChannel(texts, { dialect: setup.machine.dialect });
   const align = alignChannels(program);
   const matched = align.barriers.filter((b) => b.matched).length;
-  el('channels-info').textContent =
-    texts.length === 1
-      ? '1 channel'
-      : `${texts.length} channels · ${matched} sync point${matched === 1 ? '' : 's'} aligned`;
+  const subCount = subprograms.size;
+  const parts = [`${texts.length} channel${texts.length === 1 ? '' : 's'}`];
+  if (texts.length > 1) parts.push(`${matched} sync point${matched === 1 ? '' : 's'} aligned`);
+  if (subCount) parts.push(`${subCount} subprogram${subCount === 1 ? '' : 's'}`);
+  el('channels-info').textContent = parts.join(' · ');
 }
 
 animator.subscribe((frame) => {
@@ -259,6 +266,12 @@ animator.subscribe((frame) => {
     }
   }
 });
+
+function toSubMap(rec: Record<number, string> | undefined): Map<number, string> {
+  const m = new Map<number, string>();
+  for (const [k, v] of Object.entries(rec ?? {})) m.set(Number(k), v);
+  return m;
+}
 
 function mainChannelId(): number {
   const first = setup.machine.channels.find((c) => channelSpace(setup, c.id) === 'main');

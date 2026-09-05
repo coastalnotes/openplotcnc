@@ -299,8 +299,14 @@ export interface ChannelPayload {
 }
 
 export type HostToWebview =
-  | { type: 'init'; setup: SetupConfig; channels: ChannelPayload[]; theme: 'light' | 'dark' }
-  | { type: 'channels'; channels: ChannelPayload[] }
+  | {
+      type: 'init';
+      setup: SetupConfig;
+      channels: ChannelPayload[];
+      subprograms: Record<number, string>;
+      theme: 'light' | 'dark';
+    }
+  | { type: 'channels'; channels: ChannelPayload[]; subprograms: Record<number, string> }
   | { type: 'setup'; setup: SetupConfig }
   | { type: 'revealLine'; channel: number; line: number }
   | { type: 'openConfig' }

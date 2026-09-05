@@ -141,6 +141,7 @@ export class BackplotterPanel {
       type: 'init',
       setup: this.setup,
       channels: this.payload(),
+      subprograms: this.channelSet.subprograms,
       theme: themeKind(),
     });
   }
@@ -165,11 +166,12 @@ export class BackplotterPanel {
           type: 'init',
           setup: this.setup,
           channels: this.payload(),
+          subprograms: this.channelSet.subprograms,
           theme: themeKind(),
         });
         break;
       case 'requestChannels':
-        this.post({ type: 'channels', channels: this.payload() });
+        await this.reload();
         break;
       case 'edit':
         this.pendingEdits.set(msg.channel, msg.text);
@@ -237,7 +239,11 @@ export class BackplotterPanel {
           doc.positionAt(0),
           doc.positionAt(doc.getText().length)
         );
-        wsEdit.replace(doc.uri, full, assembleSingleFile(this.channelSet.channels));
+        wsEdit.replace(
+          doc.uri,
+          full,
+          assembleSingleFile(this.channelSet.channels, this.channelSet.trailer)
+        );
       } else {
         for (const [id] of edits) {
           const ch = this.channelSet.channels.find((c) => c.id === id);
@@ -272,7 +278,11 @@ export class BackplotterPanel {
     for (const c of this.channelSet.channels) {
       if (c.uri === uri) c.text = e.document.getText();
     }
-    this.post({ type: 'channels', channels: this.payload() });
+    this.post({
+      type: 'channels',
+      channels: this.payload(),
+      subprograms: this.channelSet.subprograms,
+    });
   }
 
   dispose(): void {

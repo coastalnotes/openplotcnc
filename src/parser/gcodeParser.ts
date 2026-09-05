@@ -28,6 +28,11 @@ import type {
 } from '../types';
 import { lexLine } from './gcodeLexer';
 import { detectSync } from './syncCodes';
+import {
+  extractSubprograms,
+  truncateAtProgramEnd,
+  type SplitProgram,
+} from './subprograms';
 
 export interface ParseOptions {
   dialect: Dialect;
@@ -161,6 +166,33 @@ export function splitChannels(
 
 function clampChannel(n: number): number {
   return Math.max(1, Math.min(4, n));
+}
+
+/**
+ * Full single-file split: channels cut at their program-end word
+ * (`M99` on some controls, `M30`/`M02` on others) plus a pool of `O#### … M99`
+ * subprograms collected from the trailing area (never from channel bodies).
+ */
+export function splitProgram(text: string, markers: string[]): SplitProgram {
+  const raw = splitChannels(text, markers);
+  const channels = new Map<number, string>();
+  const tails: string[] = [];
+
+  for (const [id, src] of raw) {
+    const { body, tail } = truncateAtProgramEnd(src);
+    channels.set(id, body);
+    if (tail.trim() !== '') tails.push(tail);
+  }
+
+  // Subprograms live in the tail(s); fall back to the whole file only if the
+  // tails held nothing (some posts drop subprograms before the first `$n`).
+  const trailer = tails.join('\n').replace(/^\s+|\s+$/g, '');
+  let subprograms = extractSubprograms(trailer);
+  if (subprograms.size === 0 && raw.size <= 1) {
+    subprograms = extractSubprograms(text);
+  }
+
+  return { channels, subprograms, trailer };
 }
 
 export function parseChannel(

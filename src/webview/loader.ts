@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { splitChannels } from '../parser';
+import { splitProgram } from '../parser';
 import type { SetupConfig } from '../types';
 
 export interface LoadedChannel {
@@ -17,6 +17,10 @@ export interface ChannelSet {
   /** The physical document in single-file mode. */
   sourceUri?: string;
   channels: LoadedChannel[];
+  /** O-number -> subprogram body, for `M98` expansion at backplot time. */
+  subprograms: Record<number, string>;
+  /** Subprogram / footer text carried through so write-back can restore it. */
+  trailer?: string;
 }
 
 function channelName(setup: SetupConfig, id: number): string {
@@ -55,9 +59,9 @@ export async function loadChannels(
   const markerList = markers.length ? markers : ['$1', '$2', '$3', '$4'];
 
   if (looksMultiChannel(text, markerList)) {
-    const split = splitChannels(text, markerList);
+    const split = splitProgram(text, markerList);
     const channels: LoadedChannel[] = [];
-    for (const [id, chunk] of [...split.entries()].sort((a, b) => a[0] - b[0])) {
+    for (const [id, chunk] of [...split.channels.entries()].sort((a, b) => a[0] - b[0])) {
       channels.push({
         id,
         name: channelName(setup, id),
@@ -65,7 +69,15 @@ export async function loadChannels(
         marker: markerList[id - 1] ?? `$${id}`,
       });
     }
-    return { mode: 'single-file', sourceUri: primary.uri.toString(), channels };
+    const subprograms: Record<number, string> = {};
+    for (const [n, body] of split.subprograms) subprograms[n] = body;
+    return {
+      mode: 'single-file',
+      sourceUri: primary.uri.toString(),
+      channels,
+      subprograms,
+      trailer: split.trailer,
+    };
   }
 
   // Multi-file: primary + siblings.
@@ -100,13 +112,14 @@ export async function loadChannels(
     }
   }
 
-  return { mode: 'multi-file', channels };
+  return { mode: 'multi-file', channels, subprograms: {} };
 }
 
-/** Rebuild a single-file document from edited channel texts. */
-export function assembleSingleFile(channels: LoadedChannel[]): string {
-  return channels
+/** Rebuild a single-file document from edited channel texts + preserved trailer. */
+export function assembleSingleFile(channels: LoadedChannel[], trailer?: string): string {
+  const body = channels
     .sort((a, b) => a.id - b.id)
     .map((c) => `${c.marker ?? `$${c.id}`}\n${c.text.replace(/\s+$/, '')}\n`)
     .join('');
+  return trailer && trailer.trim() !== '' ? `${body}${trailer.replace(/\s+$/, '')}\n` : body;
 }
