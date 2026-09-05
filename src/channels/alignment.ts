@@ -127,7 +127,10 @@ export function alignChannels(program: MultiChannelProgram): AlignmentResult {
   const perChannelBarrierIds = chans.map((c) =>
     c.markers.filter((m) => isBarrier(m.id)).map((m) => m.id)
   );
-  const order = canonicalBarrierOrder(perChannelBarrierIds);
+  // A rendezvous id that repeats (loop-backs, re-meets at the same code) is
+  // aligned only on its first meeting — otherwise the cursor would jump
+  // backwards and later spacers would collapse.
+  const order = [...new Set(canonicalBarrierOrder(perChannelBarrierIds))];
 
   // First source line for each (channel, barrierId).
   const markerLine = chans.map((c) => {
@@ -170,7 +173,8 @@ export function alignChannels(program: MultiChannelProgram): AlignmentResult {
 
     chans.forEach((_, i) => {
       const hit = markerLine[i].get(id);
-      if (hit) {
+      // Skip a marker that sits behind the cursor (already-placed content).
+      if (hit && hit.line >= cursor[i]) {
         participantIdx.push(i);
         targetLine[i] = hit.line;
         report.participants.set(chans[i].channel, hit.line);

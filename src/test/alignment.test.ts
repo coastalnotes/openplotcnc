@@ -77,6 +77,54 @@ test('Mitsubishi !L1..!L3 align line-for-line across 2 channels', () => {
   }
 });
 
+test('a rendezvous code that repeats does not collapse later spacers', () => {
+  // CH1 is much longer than CH2 between G630 and !L300; G600 repeats at the end.
+  const ch1 = [
+    'G600',
+    'G630',
+    ...Array.from({ length: 120 }, (_, i) => `G1 X${i} F0.1`),
+    '!L300',
+    'G1 X0',
+    'G600',
+    'M99',
+  ].join('\n');
+  const ch2 = ['G600', 'G630', 'G1 X5', '!L300', 'G1 X0', 'M99'].join('\n');
+
+  const prog = parseMultiChannel(
+    [
+      { channel: 1, name: '$1', source: ch1 },
+      { channel: 2, name: '$2', source: ch2 },
+    ],
+    { dialect: 'citizen' }
+  );
+  const result = alignChannels(prog);
+
+  // !L300 must land on the same row in both channels.
+  const l300 = result.barriers.find((b) => b.raw === '!L300')!;
+  assert.ok(l300 && l300.matched);
+  const rowIdx = result.rows.findIndex((r) => r.barrier === l300.id);
+  const c1 = result.channels.indexOf(1);
+  const c2 = result.channels.indexOf(2);
+  assert.notEqual(result.rows[rowIdx].cells[c1].line, null);
+  assert.notEqual(result.rows[rowIdx].cells[c2].line, null);
+
+  // CH2 got ~117 spacer rows before its !L300 (row index >> its source line).
+  const ch2L300Row = result.lineToRow.get(2)!.get(3)!; // 0-based source line 3 = !L300
+  assert.ok(ch2L300Row > 100, `expected big offset, got ${ch2L300Row}`);
+});
+
+test('G600 appears once in the barrier list even when repeated', () => {
+  const prog = parseMultiChannel(
+    [
+      { channel: 1, name: '$1', source: 'G600\nG1 X1\nG600\nM99' },
+      { channel: 2, name: '$2', source: 'G600\nG1 X2\nG600\nM99' },
+    ],
+    { dialect: 'citizen' }
+  );
+  const raws = alignChannels(prog).barriers.map((b) => b.raw);
+  assert.deepEqual(raws, ['G600']);
+});
+
 test('every row has one cell per channel', () => {
   const prog = parseMultiChannel(
     [

@@ -92,7 +92,8 @@ export function buildSchedule(
   const perChannelBarrierIds = program.channels.map((cp) =>
     (waitInfo.get(cp.channel)!.waits.filter((w) => isBarrier(w.id)).map((w) => w.id))
   );
-  const order = canonicalBarrierOrder(perChannelBarrierIds);
+  // Align each rendezvous id only on its first meeting (see alignment.ts).
+  const order = [...new Set(canonicalBarrierOrder(perChannelBarrierIds))];
 
   // Per-channel running state.
   const state = new Map<

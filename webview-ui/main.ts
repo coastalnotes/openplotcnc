@@ -210,8 +210,13 @@ function toggleSyncReport(): void {
     box.hidden = true;
     return;
   }
-  const program = parseMultiChannel(resolvedTexts(), { dialect: setup.machine.dialect });
-  const align = alignChannels(program);
+  // The report describes the columns the user sees — align on the raw text.
+  const raw = editor.channelTexts().map((t) => ({
+    channel: t.channel,
+    name: t.name,
+    source: t.source,
+  }));
+  const align = alignChannels(parseMultiChannel(raw, { dialect: setup.machine.dialect }));
   if (align.barriers.length === 0) {
     box.innerHTML = `<div class="sr-empty">No wait / sync codes found across channels.</div>`;
   } else {
@@ -373,8 +378,11 @@ function applySetup(): void {
 }
 
 function updateChannelsInfo(): void {
-  const texts = resolvedTexts();
-  const program = parseMultiChannel(texts, { dialect: setup.machine.dialect });
+  const texts = editor.channelTexts();
+  const program = parseMultiChannel(
+    texts.map((t) => ({ channel: t.channel, name: t.name, source: t.source })),
+    { dialect: setup.machine.dialect }
+  );
   const align = alignChannels(program);
   const matched = align.barriers.filter((b) => b.matched).length;
   const subCount = subprograms.size;
