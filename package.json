@@ -1,0 +1,198 @@
+{
+  "name": "openplotcnc",
+  "displayName": "OpenPlotCNC — Multi-Channel Backplotter",
+  "description": "Multi-channel G-code editor and 3D backplotter for Fanuc & Mitsubishi turning and Swiss-type CNC machines.",
+  "version": "0.1.0",
+  "publisher": "openplotcnc",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "cnc",
+    "g-code",
+    "gcode",
+    "backplot",
+    "lathe",
+    "swiss",
+    "fanuc",
+    "mitsubishi",
+    "multi-channel"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openplotcnc/openplotcnc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/openplotcnc/openplotcnc/issues"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:gcode"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "gcode",
+        "aliases": [
+          "G-code",
+          "gcode",
+          "NC"
+        ],
+        "extensions": [
+          ".nc",
+          ".cnc",
+          ".gcode",
+          ".g",
+          ".mpf",
+          ".ngc",
+          ".tap",
+          ".eia",
+          ".min",
+          ".pim"
+        ],
+        "configuration": "./language/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gcode",
+        "scopeName": "source.gcode",
+        "path": "./language/gcode.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "openplotcnc.openBackplotter",
+        "title": "OpenPlotCNC: Open Backplotter",
+        "category": "OpenPlotCNC",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "openplotcnc.syncChannels",
+        "title": "OpenPlotCNC: Sync Channels From Workspace",
+        "category": "OpenPlotCNC"
+      },
+      {
+        "command": "openplotcnc.configureTooling",
+        "title": "OpenPlotCNC: Configure Tooling & Machine Setup",
+        "category": "OpenPlotCNC"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "openplotcnc.openBackplotter",
+          "when": "resourceLangId == gcode",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "openplotcnc.openBackplotter",
+          "when": "resourceLangId == gcode",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "OpenPlotCNC",
+      "properties": {
+        "openplotcnc.machine.kinematicsMode": {
+          "type": "string",
+          "enum": [
+            "standard-lathe",
+            "swiss-type"
+          ],
+          "default": "swiss-type",
+          "description": "Machine kinematics model used for the backplot."
+        },
+        "openplotcnc.machine.dialect": {
+          "type": "string",
+          "enum": [
+            "fanuc",
+            "mitsubishi"
+          ],
+          "default": "fanuc",
+          "description": "Control dialect used when parsing sync codes and canned cycles."
+        },
+        "openplotcnc.channels.count": {
+          "type": "number",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "default": 2,
+          "description": "Number of channels / tool paths to display side-by-side."
+        },
+        "openplotcnc.channels.fileGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "PATH1.NC",
+            "PATH2.NC",
+            "PATH3.NC",
+            "PATH4.NC"
+          ],
+          "description": "Ordered workspace-relative file names (or globs) mapped to channels 1..4."
+        },
+        "openplotcnc.channels.singleFileHeaders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "$1",
+            "$2",
+            "$3",
+            "$4"
+          ],
+          "description": "Single-file channel section markers (e.g. $1..$4, or O1001..O1004)."
+        },
+        "openplotcnc.playback.defaultSpeed": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.1,
+          "maximum": 10,
+          "description": "Default playback speed multiplier."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "typecheck": "tsc --noEmit -p ./tsconfig.json && tsc --noEmit -p ./webview-ui/tsconfig.json",
+    "lint": "eslint src webview-ui --ext ts",
+    "test": "npm run typecheck && tsx --test \"src/test/**/*.test.ts\"",
+    "test:unit": "tsx --test \"src/test/**/*.test.ts\"",
+    "vsix": "vsce package --no-dependencies -o openplotcnc.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/three": "^0.171.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^8.57.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.52.2",
+    "three": "^0.171.0"
+  }
+}
