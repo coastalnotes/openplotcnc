@@ -39,14 +39,33 @@ export function renderHtml(
 </head>
 <body>
   <div id="app">
-    <div id="toolbar"></div>
+    <div id="ribbon"></div>
     <div id="split">
-      <div id="editors"></div>
+      <section id="editors-pane">
+        <header class="pane-header">
+          <span class="pane-title">Channels</span>
+          <span class="pane-info" id="channels-info"></span>
+        </header>
+        <div id="editors"></div>
+      </section>
       <div id="gutter" title="Drag to resize"></div>
-      <div id="viewport">
-        <canvas id="scene"></canvas>
-        <div id="scene-overlay"></div>
-      </div>
+      <section id="viewport-pane">
+        <header class="pane-header">
+          <span class="pane-title">3D Backplot</span>
+          <span class="pane-info" id="viewport-info"></span>
+        </header>
+        <div id="viewport">
+          <canvas id="scene"></canvas>
+          <div id="viewport-idle">
+            <div class="idle-card">
+              <div class="idle-glyph">▤</div>
+              <p>Channels are split and aligned on the left.</p>
+              <button id="idle-run" class="big-primary">Run Backplot</button>
+              <p class="idle-hint">Nothing is simulated until you run it.</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
     <div id="transport"></div>
     <div id="config-modal" hidden></div>

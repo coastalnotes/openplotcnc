@@ -104,26 +104,38 @@ export function splitChannels(
   const lines = text.split(/\r?\n/);
   const result = new Map<number, string[]>();
 
-  // Build matchers: marker string -> channel index (1-based).
-  const matchers = markers.map((m, idx) => ({
-    channel: idx + 1,
-    re: new RegExp(
-      '^\\s*' + m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b'
-    ),
-  }));
+  // Native `$1`..`$4` section markers, plus any configured aliases
+  // (e.g. `O1001`..`O1004`) mapped to channels by their position in the list.
+  const aliasMatchers = markers
+    .filter((m) => !/^\$\d/.test(m))
+    .map((m, idx) => ({
+      channel: idx + 1,
+      re: new RegExp('^\\s*' + m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b'),
+    }));
+
+  const markerChannel = (line: string): number | undefined => {
+    const native = line.match(/^\s*\$\s*(\d{1,2})\b/);
+    if (native) return clampChannel(parseInt(native[1], 10));
+    const alias = aliasMatchers.find((mm) => mm.re.test(line));
+    return alias?.channel;
+  };
 
   let current = 0;
   let sawMarker = false;
+  const preamble: string[] = [];
 
   for (const line of lines) {
-    const hit = matchers.find((mm) => mm.re.test(line));
-    if (hit) {
-      current = hit.channel;
+    const ch = markerChannel(line);
+    if (ch !== undefined) {
+      current = ch;
       sawMarker = true;
       if (!result.has(current)) result.set(current, []);
       continue; // the marker line itself is not program content
     }
-    if (current === 0) continue;
+    if (current === 0) {
+      preamble.push(line); // content before the first `$n`
+      continue;
+    }
     if (!result.has(current)) result.set(current, []);
     result.get(current)!.push(line);
   }
@@ -131,9 +143,24 @@ export function splitChannels(
   if (!sawMarker) {
     return new Map([[1, text]]);
   }
+
+  // Attach any preamble (program number, safe-start block, header comments)
+  // to the lowest-numbered channel.
+  const firstChannel = Math.min(...result.keys());
+  if (preamble.some((l) => l.trim() !== '')) {
+    const body = result.get(firstChannel) ?? [];
+    result.set(firstChannel, [...preamble, ...body]);
+  }
+
   const out = new Map<number, string>();
-  for (const [ch, ls] of result) out.set(ch, ls.join('\n'));
+  for (const [ch, ls] of [...result.entries()].sort((a, b) => a[0] - b[0])) {
+    out.set(ch, ls.join('\n'));
+  }
   return out;
+}
+
+function clampChannel(n: number): number {
+  return Math.max(1, Math.min(4, n));
 }
 
 export function parseChannel(

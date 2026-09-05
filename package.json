@@ -46,15 +46,37 @@
         ],
         "extensions": [
           ".nc",
+          ".NC",
           ".cnc",
+          ".CNC",
           ".gcode",
           ".g",
           ".mpf",
+          ".MPF",
           ".ngc",
           ".tap",
+          ".TAP",
           ".eia",
+          ".EIA",
           ".min",
-          ".pim"
+          ".MIN",
+          ".pim",
+          ".PIM",
+          ".prg",
+          ".PRG",
+          ".sub",
+          ".SUB",
+          ".mpr",
+          ".MPR",
+          ".cn1",
+          ".ecs",
+          ".fnc",
+          ".gc",
+          ".dnc"
+        ],
+        "filenamePatterns": [
+          "PATH[1-4].*",
+          "O[0-9][0-9][0-9][0-9]"
         ],
         "configuration": "./language/language-configuration.json"
       }

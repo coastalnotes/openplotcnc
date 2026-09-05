@@ -23,10 +23,15 @@ function channelName(setup: SetupConfig, id: number): string {
   return setup.machine.channels.find((c) => c.id === id)?.name ?? `Path ${id}`;
 }
 
-/** A file is "single-file multi-channel" only when >= 2 distinct markers appear. */
+/**
+ * A file is "single-file multi-channel" when it carries native `$n` section
+ * markers, or when >= 2 configured alias markers (e.g. `O1001`/`O1002`) appear.
+ */
 function looksMultiChannel(text: string, markerList: string[]): boolean {
+  if (/^\s*\$\s*\d/m.test(text)) return true;
   let hits = 0;
   for (const m of markerList) {
+    if (/^\$\d/.test(m)) continue;
     const re = new RegExp('^\\s*' + m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'm');
     if (re.test(text)) hits++;
   }

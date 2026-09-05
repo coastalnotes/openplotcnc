@@ -143,6 +143,33 @@ test('splitChannels: single-file $1..$3', () => {
   assert.ok(map.get(2)!.includes('G30 U0 W0'));
 });
 
+test('splitChannels: preamble before $1 attaches to channel 1, M30 kept in body', () => {
+  const src = [
+    'O3910(33910-00)',
+    '(SAFE START)',
+    '$1',
+    'G0 X10',
+    'M30',
+    '$2',
+    'G0 X20',
+    'M30',
+    '$3',
+    'G4 U1.0',
+    'M30',
+  ].join('\n');
+  const map = splitChannels(src, ['$1', '$2', '$3', '$4']);
+  assert.deepEqual([...map.keys()], [1, 2, 3]);
+  assert.ok(map.get(1)!.includes('O3910(33910-00)'));
+  assert.ok(map.get(1)!.includes('M30'));
+  assert.ok(map.get(3)!.startsWith('G4 U1.0'));
+});
+
+test('splitChannels: native $n markers win even without a configured list', () => {
+  const src = '$1\nG0 X1\n$2\nG0 X2';
+  const map = splitChannels(src, []);
+  assert.deepEqual([...map.keys()], [1, 2]);
+});
+
 test('parseMultiChannel: Fanuc swiss sample parses both paths with sync tokens', () => {
   const prog = parseMultiChannel(
     [

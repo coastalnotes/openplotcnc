@@ -166,6 +166,48 @@ export class SceneManager {
     if (!union.isEmpty()) this.frameBox(union);
   }
 
+  clearToolpaths(): void {
+    this.paths.clear();
+    this.tools.clear();
+    this.toolMarkers.clear();
+    this.channelPaths = [];
+  }
+
+  get hasToolpaths(): boolean {
+    return this.channelPaths.length > 0;
+  }
+
+  setRapidsVisible(visible: boolean): void {
+    for (const cp of this.channelPaths) {
+      cp.group.traverse((o) => {
+        const mat = (o as THREE.Line).material as THREE.Material | undefined;
+        if (mat && mat.type === 'LineDashedMaterial') o.visible = visible;
+      });
+    }
+  }
+
+  setGridVisible(visible: boolean): void {
+    this.grid.visible = visible;
+  }
+
+  /** Camera presets relative to the current toolpath bounds. */
+  setView(preset: 'iso' | 'top' | 'front'): void {
+    const box = new THREE.Box3().setFromObject(this.paths);
+    const target = box.isEmpty() ? new THREE.Vector3() : box.getCenter(new THREE.Vector3());
+    const r = box.isEmpty() ? 160 : Math.max(box.getSize(new THREE.Vector3()).length() * 0.7, 40);
+    this.controls.target.copy(target);
+    const dir =
+      preset === 'top'
+        ? new THREE.Vector3(0.001, 1, 0.001)
+        : preset === 'front'
+          ? new THREE.Vector3(0, 0, 1)
+          : new THREE.Vector3(0.9, 0.7, 1.1);
+    this.camera.position.copy(target).add(dir.normalize().multiplyScalar(r));
+    this.camera.near = r / 100;
+    this.camera.far = r * 100;
+    this.camera.updateProjectionMatrix();
+  }
+
   /** Update per-channel progress lines + tool markers for a wall-clock time. */
   updatePlayback(
     time: number,

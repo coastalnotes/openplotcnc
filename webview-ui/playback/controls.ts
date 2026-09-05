@@ -9,16 +9,16 @@ function fmt(t: number): string {
 /** Build the transport bar and bind it to the animator. */
 export function mountTransport(host: HTMLElement, animator: Animator): void {
   host.innerHTML = `
-    <button data-act="stepBack" title="Step back">⏮</button>
     <button data-act="toggle" title="Play / Pause" class="primary">▶</button>
-    <button data-act="stepFwd" title="Step forward">⏭</button>
-    <input data-act="scrub" type="range" min="0" max="1000" value="0" step="1" />
+    <button data-act="stepBack" title="Step to previous event">⏮</button>
+    <button data-act="stepFwd" title="Step to next event">⏭</button>
     <span data-role="time" class="mono">0:00.0</span>
-    <span class="sep">/</span>
+    <input data-act="scrub" type="range" min="0" max="1000" value="0" step="1" />
     <span data-role="dur" class="mono">0:00.0</span>
     <label class="speed">
-      <span data-role="speedval" class="mono">1.0×</span>
+      <span>Speed</span>
       <input data-act="speed" type="range" min="-1" max="1" step="0.01" value="0" />
+      <span data-role="speedval" class="mono">1.0×</span>
     </label>
   `;
 

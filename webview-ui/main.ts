@@ -7,7 +7,9 @@ import { SceneManager } from './render/sceneManager';
 import { Animator } from './render/animator';
 import { mountTransport } from './playback/controls';
 import { ConfigPanel } from './config/configPanel';
+import { Ribbon, type RibbonAction } from './ui/ribbon';
 import { parseMultiChannel } from '../src/parser';
+import { alignChannels } from '../src/channels/alignment';
 import { buildSchedule, type Schedule } from '../src/simulation/timeline';
 import { channelSpace } from '../src/kinematics/swissTransform';
 import { defaultSetup } from '../src/config/defaults';
@@ -17,7 +19,8 @@ const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as
 
 let setup: SetupConfig = defaultSetup();
 let schedule: Schedule | undefined;
-let rebuildTimer: number | undefined;
+let backplotActive = false;
+let liveTimer: number | undefined;
 
 const canvas = el<HTMLCanvasElement>('scene');
 const scene = new SceneManager(canvas);
@@ -26,7 +29,8 @@ const animator = new Animator();
 const editor = new MultiChannelEditor(el('editors'), {
   onEdit: (channel, text) => {
     send({ type: 'edit', channel, text });
-    scheduleRebuild();
+    updateChannelsInfo();
+    if (backplotActive) scheduleLiveRebuild();
   },
   onCursor: (channel, line) => send({ type: 'cursor', channel, line }),
 });
@@ -35,24 +39,102 @@ const config = new ConfigPanel(el('config-modal'), (next) => {
   setup = next;
   send({ type: 'saveSetup', setup: next });
   applySetup();
+  if (backplotActive) runBackplot();
 });
 
+const ribbon = new Ribbon(el('ribbon'), onRibbon);
 mountTransport(el('transport'), animator);
-buildToolbar();
+el('idle-run').addEventListener('click', runBackplot);
 
-function buildToolbar(): void {
-  el('toolbar').innerHTML = `
-    <span class="brand">OpenPlotCNC</span>
-    <span class="tag" data-role="mode"></span>
-    <span class="spacer"></span>
-    <button data-act="frame" class="ghost">Fit view</button>
-    <button data-act="config" class="ghost">Setup…</button>
-  `;
-  el('toolbar').addEventListener('click', (e) => {
-    const act = (e.target as HTMLElement).dataset.act;
-    if (act === 'frame') scene.frameAll();
-    if (act === 'config') config.show();
-  });
+/* ---- ribbon actions ---- */
+function onRibbon(a: RibbonAction): void {
+  switch (a) {
+    case 'reload':
+      send({ type: 'requestChannels' });
+      break;
+    case 'backplot':
+      runBackplot();
+      break;
+    case 'clear':
+      clearBackplot();
+      break;
+    case 'play':
+      animator.toggle();
+      break;
+    case 'rewind':
+      animator.seek(0);
+      break;
+    case 'stepBack':
+      animator.stepBack();
+      break;
+    case 'stepFwd':
+      animator.stepForward();
+      break;
+    case 'view-fit':
+      scene.frameAll();
+      break;
+    case 'view-iso':
+      scene.setView('iso');
+      break;
+    case 'view-top':
+      scene.setView('top');
+      break;
+    case 'view-front':
+      scene.setView('front');
+      break;
+    case 'toggle-rapids':
+      scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
+      break;
+    case 'toggle-grid':
+      scene.setGridVisible(ribbon.isOn('toggle-grid'));
+      break;
+    case 'setup':
+      config.show();
+      break;
+  }
+}
+
+/* ---- backplot lifecycle (manual) ---- */
+function runBackplot(): void {
+  const texts = editor.channelTexts();
+  if (texts.length === 0) return;
+  const program = parseMultiChannel(
+    texts.map((t) => ({ channel: t.channel, name: t.name, source: t.source })),
+    { dialect: setup.machine.dialect }
+  );
+  schedule = buildSchedule(program, setup);
+  scene.setToolpaths(schedule.channels);
+  scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
+  animator.setSchedule(schedule);
+  animator.seek(0);
+
+  backplotActive = true;
+  ribbon.setBackplotActive(true);
+  el('viewport-idle').hidden = true;
+  scene.resize();
+
+  const moves = schedule.channels.reduce((n, c) => n + c.segments.length, 0);
+  el('viewport-info').textContent =
+    `${schedule.channels.length} paths · ${moves} moves · ${schedule.duration.toFixed(1)} s cycle`;
+}
+
+function clearBackplot(): void {
+  animator.pause();
+  animator.seek(0);
+  scene.clearToolpaths();
+  schedule = undefined;
+  backplotActive = false;
+  ribbon.setBackplotActive(false);
+  ribbon.setPlaying(false);
+  el('viewport-idle').hidden = false;
+  el('viewport-info').textContent = '';
+}
+
+function scheduleLiveRebuild(): void {
+  if (liveTimer) window.clearTimeout(liveTimer);
+  liveTimer = window.setTimeout(() => {
+    if (backplotActive) runBackplot();
+  }, 400);
 }
 
 /* ---- resize plumbing ---- */
@@ -77,7 +159,7 @@ scene.resize();
   gutter.addEventListener('pointermove', (e) => {
     if (!dragging) return;
     const rect = split.getBoundingClientRect();
-    const pct = Math.min(0.8, Math.max(0.2, (e.clientX - rect.left) / rect.width));
+    const pct = Math.min(0.82, Math.max(0.18, (e.clientX - rect.left) / rect.width));
     split.style.gridTemplateColumns = `${pct * 100}% 6px 1fr`;
     scene.resize();
     editor.layout();
@@ -94,10 +176,13 @@ onHostMessage((msg: HostToWebview) => {
       applyTheme(msg.theme);
       editor.setChannels(msg.channels, setup.machine.dialect);
       applySetup();
+      updateChannelsInfo();
+      if (backplotActive) runBackplot();
       break;
     case 'channels':
       editor.setChannels(msg.channels, setup.machine.dialect);
-      rebuildSimulation();
+      updateChannelsInfo();
+      if (backplotActive) runBackplot();
       break;
     case 'setup':
       setup = msg.setup;
@@ -127,36 +212,29 @@ function applyTheme(theme: 'light' | 'dark'): void {
 
 function applySetup(): void {
   scene.setSetup(setup);
-  const modeTag = document.querySelector('[data-role="mode"]');
-  if (modeTag) {
-    modeTag.textContent = `${setup.machine.kinematicsMode} · ${setup.machine.dialect}`;
-  }
-  rebuildSimulation();
+  ribbon.setMode(
+    `${setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss' : 'Lathe'} · ${setup.machine.dialect}`
+  );
 }
 
-function scheduleRebuild(): void {
-  if (rebuildTimer) window.clearTimeout(rebuildTimer);
-  rebuildTimer = window.setTimeout(rebuildSimulation, 300);
-}
-
-function rebuildSimulation(): void {
+function updateChannelsInfo(): void {
   const texts = editor.channelTexts();
-  if (texts.length === 0) return;
   const program = parseMultiChannel(
     texts.map((t) => ({ channel: t.channel, name: t.name, source: t.source })),
     { dialect: setup.machine.dialect }
   );
-  schedule = buildSchedule(program, setup);
-  scene.setToolpaths(schedule.channels);
-  animator.setSchedule(schedule);
+  const align = alignChannels(program);
+  const matched = align.barriers.filter((b) => b.matched).length;
+  el('channels-info').textContent =
+    texts.length === 1
+      ? '1 channel'
+      : `${texts.length} channels · ${matched} sync point${matched === 1 ? '' : 's'} aligned`;
 }
 
-const mainChannelId = () => {
-  const first = setup.machine.channels.find((c) => channelSpace(setup, c.id) === 'main');
-  return first?.id ?? setup.machine.channels[0]?.id ?? 1;
-};
-
 animator.subscribe((frame) => {
+  ribbon.setPlaying(frame.playing);
+  if (!backplotActive) return;
+
   const positions = new Map<number, { pos: any; waiting: boolean }>();
   const highlight = new Map<number, { line: number; waiting: boolean }>();
   for (const [ch, st] of frame.channels) {
@@ -167,8 +245,9 @@ animator.subscribe((frame) => {
   editor.highlightExecuting(highlight);
 
   if (schedule) {
-    const mainCh = schedule.channels.find((c) => c.channel === mainChannelId());
-    const st = frame.channels.get(mainChannelId());
+    const mainId = mainChannelId();
+    const mainCh = schedule.channels.find((c) => c.channel === mainId);
+    const st = frame.channels.get(mainId);
     if (mainCh && st && mainCh.segments[st.segIndex]) {
       const subCh = schedule.channels.find((c) => channelSpace(setup, c.channel) === 'sub');
       const subSt = subCh ? frame.channels.get(subCh.channel) : undefined;
@@ -180,3 +259,8 @@ animator.subscribe((frame) => {
     }
   }
 });
+
+function mainChannelId(): number {
+  const first = setup.machine.channels.find((c) => channelSpace(setup, c.id) === 'main');
+  return first?.id ?? setup.machine.channels[0]?.id ?? 1;
+}
