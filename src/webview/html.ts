@@ -46,6 +46,7 @@ export function renderHtml(
           <span class="pane-title">Channels</span>
           <span class="pane-info" id="channels-info"></span>
         </header>
+        <div id="sync-report" hidden></div>
         <div id="editors"></div>
       </section>
       <div id="gutter" title="Drag to resize"></div>
@@ -69,6 +70,7 @@ export function renderHtml(
     </div>
     <div id="transport"></div>
     <div id="config-modal" hidden></div>
+    <div id="toast" hidden></div>
   </div>
   <script nonce="${n}">
     window.__OPC__ = { workerUri: ${JSON.stringify(String(workerJs))} };

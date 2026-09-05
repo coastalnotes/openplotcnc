@@ -304,9 +304,17 @@ export type HostToWebview =
       setup: SetupConfig;
       channels: ChannelPayload[];
       subprograms: Record<number, string>;
+      program: string;
+      mode: 'single-file' | 'multi-file';
       theme: 'light' | 'dark';
     }
-  | { type: 'channels'; channels: ChannelPayload[]; subprograms: Record<number, string> }
+  | {
+      type: 'channels';
+      channels: ChannelPayload[];
+      subprograms: Record<number, string>;
+      program: string;
+      mode: 'single-file' | 'multi-file';
+    }
   | { type: 'setup'; setup: SetupConfig }
   | { type: 'revealLine'; channel: number; line: number }
   | { type: 'openConfig' }
@@ -315,6 +323,7 @@ export type HostToWebview =
 export type WebviewToHost =
   | { type: 'ready' }
   | { type: 'requestChannels' }
+  | { type: 'pickProgram' }
   | { type: 'edit'; channel: number; text: string; uri?: string }
   | { type: 'cursor'; channel: number; line: number }
   | { type: 'openConfig' }

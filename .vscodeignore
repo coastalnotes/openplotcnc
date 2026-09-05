@@ -14,6 +14,7 @@ CONTRIBUTING.md
 !dist/**
 dist/**/*.map
 dist/**/*.ts
+!media/**
 !README.md
 !CHANGELOG.md
 !LICENSE

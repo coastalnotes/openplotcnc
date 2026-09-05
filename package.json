@@ -33,9 +33,29 @@
   },
   "main": "./dist/extension.js",
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:gcode"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openplotcnc",
+          "title": "OpenPlotCNC",
+          "icon": "media/openplotcnc.svg"
+        }
+      ]
+    },
+    "views": {
+      "openplotcnc": [
+        {
+          "type": "webview",
+          "id": "openplotcnc.home",
+          "name": "Backplotter",
+          "icon": "media/openplotcnc.svg"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "gcode",

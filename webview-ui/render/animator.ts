@@ -26,6 +26,7 @@ export class Animator {
   private time = 0;
   private playing = false;
   private speed = 1;
+  private loop = false;
   private lastTs = 0;
   private raf = 0;
   private subs = new Set<Sub>();
@@ -85,6 +86,10 @@ export class Animator {
     this.emit();
   }
 
+  setLoop(on: boolean): void {
+    this.loop = on;
+  }
+
   stepForward(): void {
     const next = this.eventTimes.find((t) => t > this.time + 1e-4);
     this.seek(next ?? this.duration);
@@ -101,8 +106,12 @@ export class Animator {
     this.lastTs = ts;
     this.time += dt * this.speed;
     if (this.time >= this.duration) {
-      this.time = this.duration;
-      this.playing = false;
+      if (this.loop && this.duration > 0) {
+        this.time = 0;
+      } else {
+        this.time = this.duration;
+        this.playing = false;
+      }
     }
     this.emit();
     if (this.playing) this.raf = requestAnimationFrame(this.tick);

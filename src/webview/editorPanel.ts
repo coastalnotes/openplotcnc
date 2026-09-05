@@ -142,8 +142,14 @@ export class BackplotterPanel {
       setup: this.setup,
       channels: this.payload(),
       subprograms: this.channelSet.subprograms,
+      program: this.programName(),
+      mode: this.channelSet.mode,
       theme: themeKind(),
     });
+  }
+
+  private programName(): string {
+    return vscode.workspace.asRelativePath(this.primary.uri);
   }
 
   private payload(): ChannelPayload[] {
@@ -167,12 +173,32 @@ export class BackplotterPanel {
           setup: this.setup,
           channels: this.payload(),
           subprograms: this.channelSet.subprograms,
+          program: this.programName(),
+          mode: this.channelSet.mode,
           theme: themeKind(),
         });
         break;
       case 'requestChannels':
         await this.reload();
         break;
+      case 'pickProgram': {
+        const uris = await vscode.workspace.findFiles(
+          '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}',
+          '**/node_modules/**',
+          200
+        );
+        const pick = await vscode.window.showQuickPick(
+          uris
+            .map((u) => ({ label: vscode.workspace.asRelativePath(u), uri: u }))
+            .sort((a, b) => a.label.localeCompare(b.label)),
+          { title: 'Select the CNC program to load' }
+        );
+        if (pick) {
+          this.primary = await vscode.workspace.openTextDocument(pick.uri);
+          await this.reload();
+        }
+        break;
+      }
       case 'edit':
         this.pendingEdits.set(msg.channel, msg.text);
         this.scheduleWriteBack();
@@ -282,6 +308,8 @@ export class BackplotterPanel {
       type: 'channels',
       channels: this.payload(),
       subprograms: this.channelSet.subprograms,
+      program: this.programName(),
+      mode: this.channelSet.mode,
     });
   }
 

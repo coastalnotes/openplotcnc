@@ -59,14 +59,21 @@ el('idle-run').addEventListener('click', runBackplot);
 /* ---- ribbon actions ---- */
 function onRibbon(a: RibbonAction): void {
   switch (a) {
+    case 'open-program':
+      send({ type: 'pickProgram' });
+      break;
     case 'reload':
       send({ type: 'requestChannels' });
       break;
     case 'backplot':
       runBackplot();
+      ribbon.showTab('simulate');
       break;
     case 'clear':
       clearBackplot();
+      break;
+    case 'sync-report':
+      toggleSyncReport();
       break;
     case 'play':
       animator.toggle();
@@ -80,6 +87,21 @@ function onRibbon(a: RibbonAction): void {
     case 'stepFwd':
       animator.stepForward();
       break;
+    case 'toggle-loop':
+      animator.setLoop(ribbon.isOn('toggle-loop'));
+      break;
+    case 'speed-0.25':
+      animator.setSpeed(0.25);
+      break;
+    case 'speed-1':
+      animator.setSpeed(1);
+      break;
+    case 'speed-2':
+      animator.setSpeed(2);
+      break;
+    case 'speed-5':
+      animator.setSpeed(5);
+      break;
     case 'view-fit':
       scene.frameAll();
       break;
@@ -92,16 +114,64 @@ function onRibbon(a: RibbonAction): void {
     case 'view-front':
       scene.setView('front');
       break;
+    case 'view-right':
+      scene.setView('right');
+      break;
     case 'toggle-rapids':
       scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
       break;
     case 'toggle-grid':
       scene.setGridVisible(ribbon.isOn('toggle-grid'));
       break;
+    case 'toggle-machine':
+      scene.setMachineVisible(ribbon.isOn('toggle-machine'));
+      break;
+    case 'km-swiss':
+    case 'km-lathe':
+      setup.machine.kinematicsMode = a === 'km-swiss' ? 'swiss-type' : 'standard-lathe';
+      send({ type: 'saveSetup', setup });
+      applySetup();
+      if (backplotActive) runBackplot();
+      break;
+    case 'dialect-fanuc':
+    case 'dialect-mitsubishi':
+      setup.machine.dialect = a === 'dialect-fanuc' ? 'fanuc' : 'mitsubishi';
+      send({ type: 'saveSetup', setup });
+      applySetup();
+      updateChannelsInfo();
+      if (backplotActive) runBackplot();
+      break;
     case 'setup':
       config.show();
       break;
   }
+}
+
+function toggleSyncReport(): void {
+  const box = el('sync-report');
+  if (!box.hidden) {
+    box.hidden = true;
+    return;
+  }
+  const program = parseMultiChannel(resolvedTexts(), { dialect: setup.machine.dialect });
+  const align = alignChannels(program);
+  if (align.barriers.length === 0) {
+    box.innerHTML = `<div class="sr-empty">No wait / sync codes found across channels.</div>`;
+  } else {
+    box.innerHTML = align.barriers
+      .map((b) => {
+        const parts = [...b.participants.entries()]
+          .map(([ch, ln]) => `CH${ch}·L${ln + 1}`)
+          .join('  ');
+        return `<div class="sr-row ${b.matched ? 'ok' : 'warn'}">
+          <span class="sr-id">${b.raw || b.id}</span>
+          <span class="sr-parts">${parts}</span>
+          <span class="sr-flag">${b.matched ? 'aligned' : 'only 1 channel'}</span>
+        </div>`;
+      })
+      .join('');
+  }
+  box.hidden = false;
 }
 
 /* ---- backplot lifecycle (manual) ---- */
@@ -183,6 +253,7 @@ onHostMessage((msg: HostToWebview) => {
       config.setSetup(setup);
       applyTheme(msg.theme);
       editor.setChannels(msg.channels, setup.machine.dialect);
+      ribbon.setProgram(`${msg.program}  ·  ${msg.mode === 'single-file' ? 'single file' : 'multi file'}`);
       applySetup();
       updateChannelsInfo();
       if (backplotActive) runBackplot();
@@ -190,6 +261,7 @@ onHostMessage((msg: HostToWebview) => {
     case 'channels':
       subprograms = toSubMap(msg.subprograms);
       editor.setChannels(msg.channels, setup.machine.dialect);
+      ribbon.setProgram(`${msg.program}  ·  ${msg.mode === 'single-file' ? 'single file' : 'multi file'}`);
       updateChannelsInfo();
       if (backplotActive) runBackplot();
       break;
@@ -222,7 +294,14 @@ function applyTheme(theme: 'light' | 'dark'): void {
 function applySetup(): void {
   scene.setSetup(setup);
   ribbon.setMode(
-    `${setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss' : 'Lathe'} · ${setup.machine.dialect}`
+    `${setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss-type' : 'Standard lathe'} · ${
+      setup.machine.dialect === 'fanuc' ? 'Fanuc' : 'Mitsubishi'
+    }`
+  );
+  ribbon.setSegment('km', setup.machine.kinematicsMode === 'swiss-type' ? 'km-swiss' : 'km-lathe');
+  ribbon.setSegment(
+    'dialect',
+    setup.machine.dialect === 'fanuc' ? 'dialect-fanuc' : 'dialect-mitsubishi'
   );
 }
 

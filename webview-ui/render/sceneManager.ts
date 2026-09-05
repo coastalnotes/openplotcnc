@@ -190,8 +190,12 @@ export class SceneManager {
     this.grid.visible = visible;
   }
 
+  setMachineVisible(visible: boolean): void {
+    this.machine.visible = visible;
+  }
+
   /** Camera presets relative to the current toolpath bounds. */
-  setView(preset: 'iso' | 'top' | 'front'): void {
+  setView(preset: 'iso' | 'top' | 'front' | 'right'): void {
     const box = new THREE.Box3().setFromObject(this.paths);
     const target = box.isEmpty() ? new THREE.Vector3() : box.getCenter(new THREE.Vector3());
     const r = box.isEmpty() ? 160 : Math.max(box.getSize(new THREE.Vector3()).length() * 0.7, 40);
@@ -201,7 +205,9 @@ export class SceneManager {
         ? new THREE.Vector3(0.001, 1, 0.001)
         : preset === 'front'
           ? new THREE.Vector3(0, 0, 1)
-          : new THREE.Vector3(0.9, 0.7, 1.1);
+          : preset === 'right'
+            ? new THREE.Vector3(1, 0, 0.001)
+            : new THREE.Vector3(0.9, 0.7, 1.1);
     this.camera.position.copy(target).add(dir.normalize().multiplyScalar(r));
     this.camera.near = r / 100;
     this.camera.far = r * 100;
