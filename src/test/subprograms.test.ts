@@ -52,6 +52,34 @@ test('splitProgram: channels end in M99 then $ — bodies cut, subs pooled from 
   assert.ok(trailer.includes('O0100'));
 });
 
+test('splitProgram: $0 common/variable section is kept out of the channels', () => {
+  const src = [
+    'O3910',
+    '$1',
+    'G0 X10',
+    'M99',
+    '$2',
+    'G0 X20',
+    'M99',
+    '$0',
+    '#814=0000004000',
+    '#815=0000003000',
+    '%',
+  ].join('\n');
+  const { channels, trailer } = splitProgram(src, ['$1', '$2', '$3', '$4']);
+  assert.deepEqual([...channels.keys()], [1, 2]);
+  assert.ok(!channels.get(1)!.includes('#814'));
+  assert.ok(!channels.get(2)!.includes('#814'));
+  assert.ok(trailer.includes('#814=0000004000'));
+});
+
+test('splitProgram: a file with only $0 is treated as one plain program', () => {
+  const src = 'O1\n$0\n#500=1\nG0 X1\nM30';
+  const { channels } = splitProgram(src, ['$1', '$2', '$3', '$4']);
+  assert.deepEqual([...channels.keys()], [1]);
+  assert.ok(channels.get(1)!.includes('G0 X1'));
+});
+
 test('splitProgram: channels ending in M30 behave the same', () => {
   const src = '$1\nG0 X1\nM30\n$2\nG0 X2\nM30';
   const { channels } = splitProgram(src, ['$1', '$2', '$3', '$4']);

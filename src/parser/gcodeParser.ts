@@ -118,24 +118,40 @@ export function splitChannels(
       re: new RegExp('^\\s*' + m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b'),
     }));
 
+  // `$0` (and `$5`+) is a common / variable / offset section on Citizen-style
+  // controls — not a tool channel. It is routed to a sink (-1), kept out of the
+  // channel list but preserved for write-back via the trailer.
+  const COMMON = -1;
   const markerChannel = (line: string): number | undefined => {
     const native = line.match(/^\s*\$\s*(\d{1,2})\b/);
-    if (native) return clampChannel(parseInt(native[1], 10));
+    if (native) {
+      const n = parseInt(native[1], 10);
+      return n >= 1 && n <= 4 ? n : COMMON;
+    }
     const alias = aliasMatchers.find((mm) => mm.re.test(line));
     return alias?.channel;
   };
 
   let current = 0;
   let sawMarker = false;
+  let sawChannel = false;
   const preamble: string[] = [];
+  const common: string[] = [];
 
   for (const line of lines) {
     const ch = markerChannel(line);
     if (ch !== undefined) {
       current = ch;
       sawMarker = true;
-      if (!result.has(current)) result.set(current, []);
+      if (ch >= 1) {
+        sawChannel = true;
+        if (!result.has(current)) result.set(current, []);
+      }
       continue; // the marker line itself is not program content
+    }
+    if (current === COMMON) {
+      common.push(line);
+      continue;
     }
     if (current === 0) {
       preamble.push(line); // content before the first `$n`
@@ -145,7 +161,9 @@ export function splitChannels(
     result.get(current)!.push(line);
   }
 
-  if (!sawMarker) {
+  void sawMarker;
+  // A file with only `$0` (no real channels) is a plain single program.
+  if (!sawChannel) {
     return new Map([[1, text]]);
   }
 
@@ -161,11 +179,8 @@ export function splitChannels(
   for (const [ch, ls] of [...result.entries()].sort((a, b) => a[0] - b[0])) {
     out.set(ch, ls.join('\n'));
   }
+  if (common.some((l) => l.trim() !== '')) out.set(COMMON, common.join('\n'));
   return out;
-}
-
-function clampChannel(n: number): number {
-  return Math.max(1, Math.min(4, n));
 }
 
 /**
@@ -178,11 +193,16 @@ export function splitProgram(text: string, markers: string[]): SplitProgram {
   const channels = new Map<number, string>();
   const tails: string[] = [];
 
+  // `$0` common / variable section (key -1) is kept aside for write-back only.
+  const commonSection = raw.get(-1) ?? '';
+  raw.delete(-1);
+
   for (const [id, src] of raw) {
     const { body, tail } = truncateAtProgramEnd(src);
     channels.set(id, body);
     if (tail.trim() !== '') tails.push(tail);
   }
+  if (commonSection.trim() !== '') tails.push(`$0\n${commonSection}`);
 
   // Subprograms live in the tail(s); fall back to the whole file only if the
   // tails held nothing (some posts drop subprograms before the first `$n`).
