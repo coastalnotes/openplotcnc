@@ -66,6 +66,15 @@ export function activate(context: vscode.ExtensionContext): void {
       await BackplotterPanel.createOrShow(context, doc);
     }),
 
+    vscode.commands.registerCommand('openplotcnc.splitChannels', async (arg?: vscode.Uri) => {
+      const doc = arg
+        ? await vscode.workspace.openTextDocument(arg)
+        : (await home.targetDocument()) ?? (await pickGcodeDocument());
+      if (!doc) return;
+      const panel = await BackplotterPanel.createOrShow(context, doc);
+      panel.setLayout('editor');
+    }),
+
     vscode.commands.registerCommand('openplotcnc.syncChannels', async () => {
       if (!BackplotterPanel.current) {
         const doc = (await home.targetDocument()) ?? (await pickGcodeDocument());

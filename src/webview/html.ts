@@ -38,13 +38,17 @@ export function renderHtml(
   <title>OpenPlotCNC Backplotter</title>
 </head>
 <body>
-  <div id="app">
+  <div id="app" data-layout="split">
     <div id="ribbon"></div>
     <div id="split">
       <section id="editors-pane">
         <header class="pane-header">
           <span class="pane-title">Channels</span>
           <span class="pane-info" id="channels-info"></span>
+          <span class="pane-actions">
+            <button id="btn-sync-report" class="pane-btn" title="Show / hide the wait-code report">Sync codes</button>
+            <button id="btn-expand-editor" class="pane-btn" title="Toggle the 3D pane">Widen ⤢</button>
+          </span>
         </header>
         <div id="sync-report" hidden></div>
         <div id="editors"></div>

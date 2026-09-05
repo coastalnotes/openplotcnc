@@ -116,6 +116,12 @@
         "icon": "$(graph-line)"
       },
       {
+        "command": "openplotcnc.splitChannels",
+        "title": "OpenPlotCNC: Split Into Channels (Editor)",
+        "category": "OpenPlotCNC",
+        "icon": "$(split-horizontal)"
+      },
+      {
         "command": "openplotcnc.syncChannels",
         "title": "OpenPlotCNC: Sync Channels From Workspace",
         "category": "OpenPlotCNC"
@@ -129,14 +135,24 @@
     "menus": {
       "editor/title": [
         {
+          "command": "openplotcnc.splitChannels",
+          "when": "resourceLangId == gcode",
+          "group": "navigation@1"
+        },
+        {
           "command": "openplotcnc.openBackplotter",
           "when": "resourceLangId == gcode",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "explorer/context": [
         {
           "command": "openplotcnc.openBackplotter",
+          "when": "resourceLangId == gcode",
+          "group": "navigation"
+        },
+        {
+          "command": "openplotcnc.splitChannels",
           "when": "resourceLangId == gcode",
           "group": "navigation"
         }

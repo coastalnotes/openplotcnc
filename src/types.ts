@@ -335,6 +335,7 @@ export type HostToWebview =
   | { type: 'setup'; setup: SetupConfig }
   | { type: 'revealLine'; channel: number; line: number }
   | { type: 'openConfig' }
+  | { type: 'setLayout'; layout: 'split' | 'editor' | '3d' }
   | { type: 'theme'; theme: 'light' | 'dark' };
 
 export type WebviewToHost =

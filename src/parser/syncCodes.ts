@@ -14,8 +14,12 @@
  *   - `!<systems>L<n>`               line-up: `!1L2`, `!12L2` (sys 1+2), `!1!2L2`
  *   - `!Ln` / `!n`                   line-up without an explicit system list
  *   - `M6xx` (M600..M699)            queue / waiting M-code sequence
+ *   - `G6xx` (G600..G699)            queue / waiting G-code sequence (e.g. G600, G630)
  *   - `M100`..`M199`                 also accepted (some posts emit these)
  */
+
+/** G6xx sync ids are offset so they never collide with M-code ids. */
+const G_SYNC_OFFSET = 1000;
 
 import type { Dialect, SyncToken, Word } from '../types';
 
@@ -84,6 +88,17 @@ export function detectSync(
     };
   }
 
+  // Citizen G6xx queue / waiting sequence (G600, G630, …).
+  if (dialect === 'citizen') {
+    const g = words.find(
+      (w) => w.letter === 'G' && Number.isFinite(w.value) && w.value >= 600 && w.value <= 699
+    );
+    if (g) {
+      const code = Math.round(g.value);
+      return { kind: 'fanuc-mwait', id: G_SYNC_OFFSET + code, partners: [], raw: `G${code}` };
+    }
+  }
+
   const mWords = words.filter((w) => w.letter === 'M' && Number.isFinite(w.value));
 
   for (const m of mWords) {
@@ -119,4 +134,9 @@ export function isPureSyncCode(code: number, dialect: Dialect): boolean {
   if (dialect === 'fanuc') return code >= 100 && code <= 199;
   if (dialect === 'citizen') return (code >= 100 && code <= 199) || (code >= 600 && code <= 699);
   return code === 100;
+}
+
+/** Human label for a sync id (undoes the G6xx id offset). */
+export function syncIdLabel(id: number): string {
+  return id > G_SYNC_OFFSET ? `G${id - G_SYNC_OFFSET}` : `M${id}`;
 }

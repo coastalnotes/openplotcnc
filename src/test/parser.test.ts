@@ -75,6 +75,37 @@ test('parseLineup: id + participating systems', () => {
   assert.deepEqual(parseLineup('!3'), { id: 3, partners: [] });
 });
 
+test('syncCodes: Citizen G6xx queue codes (G600, G630) are rendezvous', () => {
+  const g600 = detectSync('G600', lexLine('G600', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
+  const g630 = detectSync('G630', lexLine('G630', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
+  assert.equal(g600?.raw, 'G600');
+  assert.equal(g630?.raw, 'G630');
+  assert.notEqual(g600!.id, g630!.id);
+  // G600 and M600 must not collide
+  const m600 = detectSync('M600', lexLine('M600', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
+  assert.notEqual(g600!.id, m600!.id);
+  // not a sync on Fanuc
+  assert.equal(
+    detectSync('G600', lexLine('G600', 'fanuc').filter((t) => t.type === 'word') as any, undefined, 'fanuc'),
+    undefined
+  );
+});
+
+test('alignment: G600 / G630 line up across two Citizen channels', async () => {
+  const { parseMultiChannel } = await import('../parser');
+  const { alignChannels } = await import('../channels/alignment');
+  const prog = parseMultiChannel(
+    [
+      { channel: 1, name: '$1', source: 'G0 X10\nG600\nG1 Z-5 F0.1\nG630\nM99' },
+      { channel: 2, name: '$2', source: 'G0 X20\nG600\nG630\nG1 Z-2 F0.1\nM99' },
+    ],
+    { dialect: 'citizen' }
+  );
+  const align = alignChannels(prog);
+  const ids = align.barriers.filter((b) => b.matched).map((b) => b.raw);
+  assert.deepEqual(ids.sort(), ['G600', 'G630']);
+});
+
 test('syncCodes: Citizen M6xx queue codes are rendezvous', () => {
   const s = detectSync('M640', lexLine('M640', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
   assert.equal(s?.id, 640);

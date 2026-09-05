@@ -32,6 +32,7 @@ export class BackplotterPanel {
   private applyingRemoteEdit = false;
   private editTimer: NodeJS.Timeout | undefined;
   private pendingEdits = new Map<number, string>();
+  private pendingLayout: 'split' | 'editor' | '3d' | undefined;
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -135,6 +136,15 @@ export class BackplotterPanel {
     await this.reload();
   }
 
+  setLayout(layout: 'split' | 'editor' | '3d'): void {
+    this.pendingLayout = layout;
+    this.post({ type: 'setLayout', layout });
+  }
+
+  reveal(): void {
+    this.panel.reveal(vscode.ViewColumn.Beside);
+  }
+
   private async rebind(primary: vscode.TextDocument): Promise<void> {
     this.primary = primary;
     await this.reload();
@@ -198,6 +208,7 @@ export class BackplotterPanel {
           mode: this.channelSet.mode,
           theme: themeKind(),
         });
+        if (this.pendingLayout) this.post({ type: 'setLayout', layout: this.pendingLayout });
         break;
       case 'requestChannels':
         await this.reload();

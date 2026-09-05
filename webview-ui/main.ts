@@ -61,6 +61,41 @@ const ribbon = new Ribbon(el('ribbon'), onRibbon);
 mountTransport(el('transport'), animator);
 el('idle-run').addEventListener('click', runBackplot);
 
+/* ---- pane layout (Code + 3D / Code only / 3D only) ---- */
+type Layout = 'split' | 'editor' | '3d';
+function readStoredLayout(): Layout {
+  try {
+    const v = localStorage.getItem('opc.layout');
+    if (v === 'editor' || v === '3d' || v === 'split') return v;
+  } catch {
+    /* private mode */
+  }
+  return 'split';
+}
+function setLayout(mode: Layout): void {
+  el('app').dataset.layout = mode;
+  try {
+    localStorage.setItem('opc.layout', mode);
+  } catch {
+    /* ignore */
+  }
+  ribbon.setSegment('layout', `layout-${mode}` as RibbonAction);
+  el('btn-expand-editor').classList.toggle('on', mode === 'editor');
+  requestAnimationFrame(() => {
+    scene.resize();
+    editor.layout();
+  });
+}
+
+el('btn-expand-editor').addEventListener('click', () => {
+  setLayout(el('app').dataset.layout === 'editor' ? 'split' : 'editor');
+});
+el('btn-sync-report').addEventListener('click', () => {
+  toggleSyncReport();
+  el('btn-sync-report').classList.toggle('on', !el('sync-report').hidden);
+});
+setLayout(readStoredLayout());
+
 /* ---- ribbon actions ---- */
 function onRibbon(a: RibbonAction): void {
   switch (a) {
@@ -106,6 +141,15 @@ function onRibbon(a: RibbonAction): void {
       break;
     case 'speed-5':
       animator.setSpeed(5);
+      break;
+    case 'layout-split':
+      setLayout('split');
+      break;
+    case 'layout-editor':
+      setLayout('editor');
+      break;
+    case 'layout-3d':
+      setLayout('3d');
       break;
     case 'view-fit':
       scene.frameAll();
@@ -288,6 +332,9 @@ onHostMessage((msg: HostToWebview) => {
       break;
     case 'theme':
       applyTheme(msg.theme);
+      break;
+    case 'setLayout':
+      setLayout(msg.layout);
       break;
     case 'revealLine':
       editor.revealChannelLine(msg.channel, msg.line);

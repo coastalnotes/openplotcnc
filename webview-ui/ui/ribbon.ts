@@ -27,6 +27,9 @@ export type RibbonAction =
   | 'speed-1'
   | 'speed-2'
   | 'speed-5'
+  | 'layout-split'
+  | 'layout-editor'
+  | 'layout-3d'
   | 'view-fit'
   | 'view-iso'
   | 'view-top'
@@ -120,6 +123,14 @@ const TABS: Tab[] = [
     id: 'view',
     label: 'View',
     panels: [
+      {
+        title: 'Layout',
+        buttons: [
+          { action: 'layout-split', label: 'Code +\n3D', glyph: '▤', size: 'sm', segment: 'layout', on: true },
+          { action: 'layout-editor', label: 'Code\nonly', glyph: '▥', size: 'sm', segment: 'layout' },
+          { action: 'layout-3d', label: '3D\nonly', glyph: '◨', size: 'sm', segment: 'layout' },
+        ],
+      },
       {
         title: 'Camera',
         buttons: [
