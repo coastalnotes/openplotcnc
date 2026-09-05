@@ -26,10 +26,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/openplotcnc/openplotcnc.git"
+    "url": "https://github.com/coastalnotes/openplotcnc.git"
   },
   "bugs": {
-    "url": "https://github.com/openplotcnc/openplotcnc/issues"
+    "url": "https://github.com/coastalnotes/openplotcnc/issues"
   },
   "main": "./dist/extension.js",
   "activationEvents": [

@@ -4,7 +4,7 @@ An open-source VS Code extension providing a **multi-channel G-code editor** and
 **3D backplotter** for **Fanuc** and **Mitsubishi** turning and **Swiss-type**
 CNC machines. Runs on Windows, macOS and Linux.
 
-![status](https://github.com/openplotcnc/openplotcnc/actions/workflows/ci.yml/badge.svg)
+![status](https://github.com/coastalnotes/openplotcnc/actions/workflows/ci.yml/badge.svg)
 
 ---
 
