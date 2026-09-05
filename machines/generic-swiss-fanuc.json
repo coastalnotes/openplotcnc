@@ -1,0 +1,36 @@
+{
+  "id": "generic-swiss-fanuc",
+  "name": "Generic Swiss (Fanuc, 2 paths)",
+  "vendor": "Generic",
+  "summary": "Neutral 2-path sliding-head Swiss lathe with a Fanuc-style control. A starting point when no specific template matches.",
+  "reference": "",
+  "notes": [
+    "Two paths: PATH1 = main / gang, PATH2 = sub / back. Multi-file (PATH1.NC / PATH2.NC) or single-file with $1 / $2 markers.",
+    "Sync: Fanuc waiting M-codes M100-M199 (optionally with P<bitmask> to wait on selected paths), or the WAITCODE n alias.",
+    "G12.1 / G13.1 polar interpolation, G07.1 cylindrical interpolation, G71/G72/G76 turning cycles supported."
+  ],
+  "axes": ["X1", "Y1", "Z1", "C1", "X2", "Z2", "C2"],
+  "setup": {
+    "version": 1,
+    "template": "generic-swiss-fanuc",
+    "machine": {
+      "kinematicsMode": "swiss-type",
+      "dialect": "fanuc",
+      "diameterMode": true,
+      "units": "mm",
+      "guideBushingZ": 0,
+      "mainSpindleFaceZ": -20,
+      "subSpindle": { "enabled": true, "homeZ": 260, "pickupZ": 40 },
+      "channels": [
+        { "id": 1, "name": "Path 1 (Main)", "spindle": "main", "color": "#22d3ee", "file": "PATH1.NC", "marker": "$1" },
+        { "id": 2, "name": "Path 2 (Sub)", "spindle": "sub", "color": "#f59e0b", "file": "PATH2.NC", "marker": "$2" }
+      ]
+    },
+    "stock": { "outerDiameter": 20, "innerDiameter": 0, "length": 300, "protrusion": 15, "material": "AISI 1215" },
+    "tools": [
+      { "id": "T0101", "channel": 1, "station": "T0101", "type": "od-turn", "orientation": "main", "noseRadius": 0.4 },
+      { "id": "T0303", "channel": 1, "station": "T0303", "type": "part-off", "orientation": "main", "width": 2 },
+      { "id": "T0505", "channel": 2, "station": "T0505", "type": "od-turn", "orientation": "sub", "noseRadius": 0.2 }
+    ]
+  }
+}

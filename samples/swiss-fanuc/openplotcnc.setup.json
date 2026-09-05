@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "machine": {
+    "kinematicsMode": "swiss-type",
+    "dialect": "mitsubishi",
+    "diameterMode": true,
+    "units": "mm",
+    "guideBushingZ": 0,
+    "mainSpindleFaceZ": -20,
+    "subSpindle": {
+      "enabled": true,
+      "homeZ": 260,
+      "pickupZ": 40
+    },
+    "channels": [
+      {
+        "id": 1,
+        "name": "Path 1",
+        "spindle": "main",
+        "color": "#22d3ee",
+        "file": "PATH1.NC",
+        "marker": "$1"
+      },
+      {
+        "id": 2,
+        "name": "Path 2",
+        "spindle": "sub",
+        "color": "#f59e0b",
+        "file": "PATH2.NC",
+        "marker": "$2"
+      }
+    ]
+  },
+  "stock": {
+    "outerDiameter": 20,
+    "innerDiameter": 0,
+    "length": 300,
+    "protrusion": 15,
+    "material": "AISI 1215"
+  },
+  "tools": [
+    {
+      "id": "t1-od",
+      "channel": 1,
+      "station": "T0101",
+      "type": "od-turn",
+      "orientation": "main",
+      "noseRadius": 0.4
+    },
+    {
+      "id": "t1-part",
+      "channel": 1,
+      "station": "T0303",
+      "type": "part-off",
+      "orientation": "main",
+      "width": 2
+    },
+    {
+      "id": "t2-back",
+      "channel": 2,
+      "station": "T0505",
+      "type": "od-turn",
+      "orientation": "sub",
+      "noseRadius": 0.2
+    }
+  ]
+}

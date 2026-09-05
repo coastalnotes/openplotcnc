@@ -290,6 +290,8 @@ button.primary {
 .cfg-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .cfg-table th, .cfg-table td { border: 1px solid var(--border); padding: 2px 4px; text-align: left; }
 .cfg-table input, .cfg-table select { max-width: 100%; width: 100%; }
+.cfg-body label span { display: flex; gap: 6px; align-items: center; }
+.cfg-body .muted { opacity: 0.7; }
 
 /* ============ SYNC REPORT ============ */
 #sync-report {
@@ -314,6 +316,76 @@ button.primary {
 .sr-row.ok .sr-flag { color: #4ade80; }
 .sr-row.warn .sr-flag { color: var(--sync); }
 .sr-empty { opacity: 0.6; padding: 4px 0; }
+
+/* ============ HELP PANEL ============ */
+.help-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 55;
+}
+.help-modal[hidden] { display: none; }
+.help-card {
+  width: min(680px, 94vw);
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.4);
+}
+.help-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.help-card h2 { margin: 0; font-size: 15px; display: flex; align-items: baseline; gap: 10px; }
+.help-dialect { font-size: 11px; opacity: 0.6; font-weight: 400; }
+.help-body { display: grid; grid-template-columns: 190px 1fr; min-height: 0; }
+.help-nav {
+  border-right: 1px solid var(--border);
+  padding: 8px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.help-nav button {
+  text-align: left;
+  padding: 7px 9px;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.help-nav button:hover { background: var(--panel-2); }
+.help-nav button.active { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.help-content { padding: 16px 20px; overflow: auto; line-height: 1.5; }
+.help-content h3 { margin: 0 0 10px; font-size: 15px; }
+.help-content p { margin: 0 0 10px; }
+.help-pre {
+  margin: 0 0 4px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border-radius: 4px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.help-codes { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+.help-codes td { border-top: 1px solid var(--border); padding: 5px 8px; vertical-align: top; }
+.help-codes td.hc {
+  white-space: nowrap;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--accent);
+  width: 1%;
+}
 
 /* ============ TOAST ============ */
 #toast {

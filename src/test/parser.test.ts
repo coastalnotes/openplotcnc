@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 
 import { lexLine, evalExpression } from '../parser/gcodeLexer';
 import { parseChannel, parseMultiChannel, splitChannels } from '../parser/gcodeParser';
-import { detectSync, decodePathMask } from '../parser/syncCodes';
+import { detectSync, decodePathMask, parseLineup } from '../parser/syncCodes';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sample = (p: string) => readFileSync(resolve(here, '../../samples', p), 'utf8');
@@ -57,6 +57,41 @@ test('syncCodes: Fanuc P bitmask wait', () => {
   assert.equal(s?.kind, 'fanuc-pwait');
   assert.deepEqual(s?.partners, [1, 2]);
   assert.deepEqual(decodePathMask(6), [2, 3]);
+});
+
+test('lexer: Citizen line-up forms !1L2, !12L2, !1!2L2', () => {
+  assert.equal(lexLine('!1L2', 'citizen').find((t) => t.type === 'sync')?.value, 2);
+  assert.equal(lexLine('!12L2', 'citizen').find((t) => t.type === 'sync')?.value, 2);
+  const multi = lexLine('!1!2L2 G0 X1', 'citizen').find((t) => t.type === 'sync');
+  assert.equal(multi?.value, 2);
+  assert.equal(multi?.raw.replace(/\s+$/, ''), '!1!2L2');
+});
+
+test('parseLineup: id + participating systems', () => {
+  assert.deepEqual(parseLineup('!L2'), { id: 2, partners: [] });
+  assert.deepEqual(parseLineup('!1L2'), { id: 2, partners: [1] });
+  assert.deepEqual(parseLineup('!12L2'), { id: 2, partners: [1, 2] });
+  assert.deepEqual(parseLineup('!1!2L2'), { id: 2, partners: [1, 2] });
+  assert.deepEqual(parseLineup('!3'), { id: 3, partners: [] });
+});
+
+test('syncCodes: Citizen M6xx queue codes are rendezvous', () => {
+  const s = detectSync('M640', lexLine('M640', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
+  assert.equal(s?.id, 640);
+  assert.equal(s?.kind, 'fanuc-mwait');
+  // not a sync on Fanuc
+  assert.equal(
+    detectSync('M640', lexLine('M640', 'fanuc').filter((t) => t.type === 'word') as any, undefined, 'fanuc'),
+    undefined
+  );
+});
+
+test('syncCodes: Citizen !1L2 carries participants', () => {
+  const toks = lexLine('!1L2', 'citizen');
+  const syncTok = toks.find((t) => t.type === 'sync')!;
+  const s = detectSync('!1L2', [], { value: syncTok.value, raw: syncTok.raw }, 'citizen');
+  assert.equal(s?.id, 2);
+  assert.deepEqual(s?.partners, [1]);
 });
 
 test('syncCodes: WAITCODE alias', () => {

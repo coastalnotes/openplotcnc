@@ -39,7 +39,10 @@ export type RibbonAction =
   | 'km-lathe'
   | 'dialect-fanuc'
   | 'dialect-mitsubishi'
-  | 'setup';
+  | 'dialect-citizen'
+  | 'load-machine'
+  | 'setup'
+  | 'help';
 
 interface Btn {
   action: RibbonAction;
@@ -142,6 +145,13 @@ const TABS: Tab[] = [
     label: 'Setup',
     panels: [
       {
+        title: 'Machine',
+        buttons: [
+          { action: 'load-machine', label: 'Load\nMachine', glyph: '🛠', size: 'lg' },
+          { action: 'setup', label: 'Setup\nEditor', glyph: '⚙', size: 'sm' },
+        ],
+      },
+      {
         title: 'Kinematics',
         buttons: [
           { action: 'km-swiss', label: 'Swiss\nType', glyph: '⟼', size: 'sm', segment: 'km', on: true },
@@ -152,12 +162,19 @@ const TABS: Tab[] = [
         title: 'Control',
         buttons: [
           { action: 'dialect-fanuc', label: 'Fanuc', glyph: 'F', size: 'sm', segment: 'dialect', on: true },
-          { action: 'dialect-mitsubishi', label: 'Mitsubishi', glyph: 'M', size: 'sm', segment: 'dialect' },
+          { action: 'dialect-mitsubishi', label: 'Mitsu', glyph: 'M', size: 'sm', segment: 'dialect' },
+          { action: 'dialect-citizen', label: 'Citizen', glyph: 'C', size: 'sm', segment: 'dialect' },
         ],
       },
+    ],
+  },
+  {
+    id: 'help',
+    label: 'Help',
+    panels: [
       {
-        title: 'Machine & Tooling',
-        buttons: [{ action: 'setup', label: 'Setup\nEditor', glyph: '⚙', size: 'lg' }],
+        title: 'Reference',
+        buttons: [{ action: 'help', label: 'Codes &\nMachine', glyph: '?', size: 'lg' }],
       },
     ],
   },

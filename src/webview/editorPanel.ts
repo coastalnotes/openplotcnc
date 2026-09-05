@@ -4,6 +4,7 @@ import { assembleSingleFile, loadChannels, type ChannelSet } from './loader';
 import { loadSetup, saveSetup } from './setupIo';
 import { parseMultiChannel } from '../parser';
 import { alignChannels } from '../channels/alignment';
+import { MACHINE_TEMPLATES, templateSetup } from '../machines';
 import type {
   ChannelPayload,
   HostToWebview,
@@ -129,6 +130,11 @@ export class BackplotterPanel {
     this.post({ type: 'openConfig' });
   }
 
+  /** Re-read setup + channels from disk and push to the webview. */
+  async reloadPublic(): Promise<void> {
+    await this.reload();
+  }
+
   private async rebind(primary: vscode.TextDocument): Promise<void> {
     this.primary = primary;
     await this.reload();
@@ -150,6 +156,21 @@ export class BackplotterPanel {
 
   private programName(): string {
     return vscode.workspace.asRelativePath(this.primary.uri);
+  }
+
+  private async applyTemplate(id: string): Promise<void> {
+    const next = templateSetup(id);
+    if (!next) return;
+    // Keep the channel file/marker mapping the current program already uses.
+    const existing = this.setup.machine.channels;
+    next.machine.channels = next.machine.channels.map((c) => ({
+      ...c,
+      file: existing.find((e) => e.id === c.id)?.file ?? c.file,
+    }));
+    this.setup = next;
+    await saveSetup(this.setup, this.primary.uri);
+    await this.reload();
+    vscode.window.setStatusBarMessage(`OpenPlotCNC: loaded ${id}`, 2500);
   }
 
   private payload(): ChannelPayload[] {
@@ -199,6 +220,22 @@ export class BackplotterPanel {
         }
         break;
       }
+      case 'pickMachine': {
+        const pick = await vscode.window.showQuickPick(
+          MACHINE_TEMPLATES.map((t) => ({
+            label: t.name,
+            description: t.vendor,
+            detail: t.summary,
+            id: t.id,
+          })),
+          { title: 'Load a machine template', matchOnDetail: true }
+        );
+        if (pick) await this.applyTemplate(pick.id);
+        break;
+      }
+      case 'loadMachine':
+        await this.applyTemplate(msg.templateId);
+        break;
       case 'edit':
         this.pendingEdits.set(msg.channel, msg.text);
         this.scheduleWriteBack();

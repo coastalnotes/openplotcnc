@@ -7,12 +7,14 @@ import { SceneManager } from './render/sceneManager';
 import { Animator } from './render/animator';
 import { mountTransport } from './playback/controls';
 import { ConfigPanel } from './config/configPanel';
+import { HelpPanel } from './ui/helpPanel';
 import { Ribbon, type RibbonAction } from './ui/ribbon';
 import { parseMultiChannel, expandSubprograms } from '../src/parser';
 import { alignChannels } from '../src/channels/alignment';
 import { buildSchedule, type Schedule } from '../src/simulation/timeline';
 import { channelSpace } from '../src/kinematics/swissTransform';
 import { defaultSetup } from '../src/config/defaults';
+import { getTemplate, MACHINE_TEMPLATES } from '../src/machines';
 import type { HostToWebview, SetupConfig } from '../src/types';
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -49,8 +51,11 @@ const config = new ConfigPanel(el('config-modal'), (next) => {
   setup = next;
   send({ type: 'saveSetup', setup: next });
   applySetup();
+  updateChannelsInfo();
   if (backplotActive) runBackplot();
-});
+}, MACHINE_TEMPLATES);
+
+const help = new HelpPanel(el('help-modal'));
 
 const ribbon = new Ribbon(el('ribbon'), onRibbon);
 mountTransport(el('transport'), animator);
@@ -135,14 +140,22 @@ function onRibbon(a: RibbonAction): void {
       break;
     case 'dialect-fanuc':
     case 'dialect-mitsubishi':
-      setup.machine.dialect = a === 'dialect-fanuc' ? 'fanuc' : 'mitsubishi';
+    case 'dialect-citizen':
+      setup.machine.dialect =
+        a === 'dialect-fanuc' ? 'fanuc' : a === 'dialect-citizen' ? 'citizen' : 'mitsubishi';
       send({ type: 'saveSetup', setup });
       applySetup();
       updateChannelsInfo();
       if (backplotActive) runBackplot();
       break;
+    case 'load-machine':
+      send({ type: 'pickMachine' });
+      break;
     case 'setup':
       config.show();
+      break;
+    case 'help':
+      help.toggle();
       break;
   }
 }
@@ -291,18 +304,25 @@ function applyTheme(theme: 'light' | 'dark'): void {
   scene.setTheme(theme);
 }
 
+const DIALECT_LABEL = { fanuc: 'Fanuc', mitsubishi: 'Mitsubishi', citizen: 'Citizen Cincom' } as const;
+
 function applySetup(): void {
   scene.setSetup(setup);
+  const tpl = setup.template ? getTemplate(setup.template) : undefined;
+  const km = setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss-type' : 'Standard lathe';
   ribbon.setMode(
-    `${setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss-type' : 'Standard lathe'} · ${
-      setup.machine.dialect === 'fanuc' ? 'Fanuc' : 'Mitsubishi'
-    }`
+    `${tpl ? tpl.name + '  ·  ' : ''}${km} · ${DIALECT_LABEL[setup.machine.dialect]}`
   );
   ribbon.setSegment('km', setup.machine.kinematicsMode === 'swiss-type' ? 'km-swiss' : 'km-lathe');
   ribbon.setSegment(
     'dialect',
-    setup.machine.dialect === 'fanuc' ? 'dialect-fanuc' : 'dialect-mitsubishi'
+    setup.machine.dialect === 'fanuc'
+      ? 'dialect-fanuc'
+      : setup.machine.dialect === 'citizen'
+        ? 'dialect-citizen'
+        : 'dialect-mitsubishi'
   );
+  help.setContext(setup.machine.dialect, tpl);
 }
 
 function updateChannelsInfo(): void {

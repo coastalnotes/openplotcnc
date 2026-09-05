@@ -4,6 +4,7 @@ import { loadSetup } from './setupIo';
 import { parseMultiChannel } from '../parser';
 import { alignChannels } from '../channels/alignment';
 import { CHANNEL_COLORS } from '../config/defaults';
+import { MACHINE_TEMPLATES } from '../machines';
 
 const GCODE_GLOB = '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}';
 
@@ -16,6 +17,8 @@ export interface SidebarState {
   syncPoints: number;
   kinematics: string;
   dialect: string;
+  templateId?: string;
+  templates: { id: string; name: string }[];
 }
 
 function nonce(): string {
@@ -45,7 +48,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly onOpenBackplotter: (doc: vscode.TextDocument) => void,
-    private readonly onOpenSetup: () => void
+    private readonly onOpenSetup: () => void,
+    private readonly onLoadTemplate: (id: string, doc: vscode.TextDocument | undefined) => Promise<void>
   ) {
     context.subscriptions.push(
       vscode.window.onDidChangeActiveTextEditor((e) => {
@@ -80,7 +84,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     };
     view.webview.html = this.html(view.webview);
 
-    view.webview.onDidReceiveMessage(async (m: { type: string; uri?: string }) => {
+    view.webview.onDidReceiveMessage(async (m: { type: string; uri?: string; id?: string }) => {
       switch (m.type) {
         case 'ready':
           void this.refresh();
@@ -102,6 +106,9 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         }
         case 'setup':
           this.onOpenSetup();
+          break;
+        case 'loadMachine':
+          if (m.id) await this.onLoadTemplate(m.id, await this.targetDocument());
           break;
         case 'openFolder':
           void vscode.commands.executeCommand('workbench.action.files.openFolder');
@@ -142,6 +149,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       }
     }
 
+    const templates = MACHINE_TEMPLATES.map((t) => ({ id: t.id, name: t.name }));
+
     const doc = await this.targetDocument();
     if (!doc) {
       return {
@@ -152,6 +161,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         syncPoints: 0,
         kinematics: '',
         dialect: '',
+        templates,
       };
     }
 
@@ -176,7 +186,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
       })),
       syncPoints: align.barriers.filter((b) => b.matched).length,
       kinematics: setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss-type' : 'Standard lathe',
-      dialect: setup.machine.dialect === 'fanuc' ? 'Fanuc' : 'Mitsubishi',
+      dialect:
+        setup.machine.dialect === 'fanuc'
+          ? 'Fanuc'
+          : setup.machine.dialect === 'citizen'
+            ? 'Citizen'
+            : 'Mitsubishi',
+      templateId: setup.template,
+      templates,
     };
   }
 
@@ -225,6 +242,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     background: transparent; color: var(--vscode-foreground); cursor: pointer; width: 100%; }
   .list button:hover { background: var(--vscode-list-hoverBackground); }
   .empty { text-align: center; opacity: .7; padding: 16px 4px; }
+  select { width: 100%; padding: 5px; margin-bottom: 6px; background: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; }
 </style></head><body>
 <div class="wrap" id="root">loading…</div>
 <script nonce="${n}">
@@ -261,6 +280,16 @@ function render(s){
     h += '</div>';
   }
 
+  if(s.templates && s.templates.length){
+    h += '<div class="card"><h4>Machine</h4>';
+    h += '<select id="tpl">';
+    for(const t of s.templates) h += '<option value="'+esc(t.id)+'"'+(t.id===s.templateId?' selected':'')+'>'+esc(t.name)+'</option>';
+    h += '</select>';
+    h += '<button class="sec" data-a="loadMachine">Load machine template</button>';
+    h += '<div class="muted" style="margin-top:4px;font-size:11px">Sets kinematics, dialect and the standard tool list. Customise afterward in Setup.</div>';
+    h += '</div>';
+  }
+
   h += '<button class="primary" data-a="open">Open Backplotter</button>';
   h += '<button class="sec" data-a="setup">Machine &amp; Tooling Setup</button>';
 
@@ -273,7 +302,9 @@ function render(s){
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if(!b) return;
-  vscode.postMessage({ type: b.dataset.a, uri: b.dataset.uri });
+  const msg = { type: b.dataset.a, uri: b.dataset.uri };
+  if(b.dataset.a === 'loadMachine'){ const sel = document.getElementById('tpl'); msg.id = sel && sel.value; }
+  vscode.postMessage(msg);
 });
 window.addEventListener('message', e => { if(e.data && e.data.type==='state') render(e.data.state); });
 vscode.postMessage({ type: 'ready' });

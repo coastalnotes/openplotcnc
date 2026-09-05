@@ -239,7 +239,7 @@ export function parseChannel(
     let comment: string | undefined;
     let blockDelete = false;
     let channelMarker: number | undefined;
-    let syncLexValue: number | undefined;
+    let syncLex: { value: number; raw: string } | undefined;
     let blockProgramNumber: number | undefined;
     let nNumber: number | undefined;
 
@@ -260,7 +260,7 @@ export function parseChannel(
           channelMarker = t.value;
           break;
         case 'sync':
-          syncLexValue = t.value;
+          syncLex = { value: t.value, raw: t.raw };
           if (Number.isNaN(t.value)) {
             diagnostics.push(
               diag('warning', 'Sync directive without a number', sourceLine, t.col, t.raw.length)
@@ -355,7 +355,7 @@ export function parseChannel(
     const cycle = resolveCannedCycle(words, blocks.length);
 
     // ---- sync ------------------------------------------------------
-    const sync = detectSync(rawLine, words, syncLexValue, opts.dialect);
+    const sync = detectSync(rawLine, words, syncLex, opts.dialect);
 
     const block: GcodeBlock = {
       channel,
@@ -459,10 +459,10 @@ function applyModal(
       case near(g, 95):
         modal.feedMode = 'per-rev';
         break;
-      case near(g, 98) && opts.dialect === 'fanuc':
+      case near(g, 98) && opts.dialect !== 'mitsubishi':
         modal.feedMode = 'per-min';
         break;
-      case near(g, 99) && opts.dialect === 'fanuc':
+      case near(g, 99) && opts.dialect !== 'mitsubishi':
         modal.feedMode = 'per-rev';
         break;
       // spindle mode

@@ -135,10 +135,11 @@ export function normalizeSetup(input: unknown): {
 
   const setup: SetupConfig = {
     version: 1,
+    template: typeof raw.template === 'string' ? raw.template : undefined,
     machine: {
       kinematicsMode:
         m.kinematicsMode === 'standard-lathe' ? 'standard-lathe' : 'swiss-type',
-      dialect: m.dialect === 'mitsubishi' ? 'mitsubishi' : 'fanuc',
+      dialect: (['fanuc', 'mitsubishi', 'citizen'] as const).find((d) => d === m.dialect) ?? 'fanuc',
       diameterMode: m.diameterMode ?? base.machine.diameterMode,
       units: m.units === 'inch' ? 'inch' : 'mm',
       guideBushingZ: num(m.guideBushingZ, base.machine.guideBushingZ, 'machine.guideBushingZ'),

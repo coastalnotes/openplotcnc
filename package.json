@@ -158,10 +158,21 @@
           "type": "string",
           "enum": [
             "fanuc",
-            "mitsubishi"
+            "mitsubishi",
+            "citizen"
+          ],
+          "enumDescriptions": [
+            "Fanuc multi-path: M100-M199 waiting M-codes, M<n> P<mask>.",
+            "Mitsubishi: !L1-!Ln line-up codes, M100.",
+            "Citizen Cincom (Mitsubishi-Meldas): !nLm line-up codes and M600-M699 queue M-codes."
           ],
           "default": "fanuc",
           "description": "Control dialect used when parsing sync codes and canned cycles."
+        },
+        "openplotcnc.machine.template": {
+          "type": "string",
+          "default": "",
+          "description": "Machine template id to seed new setups from (e.g. citizen-l12vii, citizen-l12x). Leave blank for generic defaults."
         },
         "openplotcnc.channels.count": {
           "type": "number",
@@ -212,9 +223,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "node esbuild.js",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "compile": "npm run clean && node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "node esbuild.js --production",
+    "package": "npm run clean && node esbuild.js --production",
     "typecheck": "tsc --noEmit -p ./tsconfig.json && tsc --noEmit -p ./webview-ui/tsconfig.json",
     "lint": "eslint src webview-ui --ext ts",
     "test": "npm run typecheck && tsx --test \"src/test/**/*.test.ts\"",

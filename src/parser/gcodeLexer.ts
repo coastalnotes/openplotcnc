@@ -119,21 +119,33 @@ export function lexLine(line: string, dialect: Dialect): Token[] {
       continue;
     }
 
-    // Mitsubishi sync directive: ! L 2   |   ! 3
+    // Mitsubishi / Citizen line-up directive:
+    //   !L2   ·   !3   ·   !1L2 (system 1 waits at 2)   ·   !12L2 (systems 1&2)
+    //   !1!2L2 (multi-system form)
     if (ch === '!') {
       i++;
-      while (i < n && /\s/.test(line[i])) i++;
-      if ((line[i] === 'L' || line[i] === 'l')) i++;
-      while (i < n && /\s/.test(line[i])) i++;
-      let num = '';
-      while (i < n && /[0-9]/.test(line[i])) num += line[i++];
-      tokens.push({
-        type: 'sync',
-        letter: '!',
-        value: num === '' ? NaN : parseInt(num, 10),
-        raw: line.slice(start, i),
-        col: start,
-      });
+      const isSyncChar = (c: string | undefined) => c !== undefined && /[0-9Ll!]/.test(c);
+      while (i < n) {
+        if (isSyncChar(line[i])) {
+          i++;
+          continue;
+        }
+        if (line[i] === ' ') {
+          let k = i;
+          while (k < n && line[k] === ' ') k++;
+          if (isSyncChar(line[k])) {
+            i = k;
+            continue;
+          }
+        }
+        break;
+      }
+      const raw = line.slice(start, i);
+      // Primary wait number: after the last `L`, else the trailing digits.
+      const lm = raw.match(/[Ll]\s*(\d+)(?!.*\d)/);
+      const tm = raw.match(/(\d+)(?!.*\d)/);
+      const value = lm ? parseInt(lm[1], 10) : tm ? parseInt(tm[1], 10) : NaN;
+      tokens.push({ type: 'sync', letter: '!', value, raw, col: start });
       continue;
     }
 

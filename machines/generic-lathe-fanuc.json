@@ -1,0 +1,36 @@
+{
+  "id": "generic-lathe-fanuc",
+  "name": "Generic Lathe (Fanuc, 1 path)",
+  "vendor": "Generic",
+  "summary": "Fixed-headstock turning centre, single path, Fanuc control. Headstock does not move; the turret does.",
+  "reference": "",
+  "notes": [
+    "Single channel. Headstock is fixed (standard-lathe kinematics), so Z moves the tool, not the bar.",
+    "Sync codes are not used with one path. G71/G72/G73 roughing, G70 finishing, G76 threading, G74/G75 pecking / grooving.",
+    "X words are diameters by default; switch to radius in Setup if your control is in radius mode."
+  ],
+  "axes": ["X", "Z", "C", "Y"],
+  "setup": {
+    "version": 1,
+    "template": "generic-lathe-fanuc",
+    "machine": {
+      "kinematicsMode": "standard-lathe",
+      "dialect": "fanuc",
+      "diameterMode": true,
+      "units": "mm",
+      "guideBushingZ": 0,
+      "mainSpindleFaceZ": 0,
+      "subSpindle": { "enabled": false, "homeZ": 400, "pickupZ": 120 },
+      "channels": [
+        { "id": 1, "name": "Turret", "spindle": "main", "color": "#22d3ee", "marker": "$1" }
+      ]
+    },
+    "stock": { "outerDiameter": 40, "innerDiameter": 0, "length": 150, "protrusion": 90, "material": "AISI 4140" },
+    "tools": [
+      { "id": "T0101", "channel": 1, "station": "T0101", "type": "od-turn", "orientation": "main", "noseRadius": 0.8 },
+      { "id": "T0202", "channel": 1, "station": "T0202", "type": "id-bore", "orientation": "main", "noseRadius": 0.4 },
+      { "id": "T0303", "channel": 1, "station": "T0303", "type": "part-off", "orientation": "main", "width": 3 },
+      { "id": "T0404", "channel": 1, "station": "T0404", "type": "thread", "orientation": "main", "noseRadius": 0.05 }
+    ]
+  }
+}

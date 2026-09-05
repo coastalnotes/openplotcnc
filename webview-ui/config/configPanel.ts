@@ -1,4 +1,4 @@
-import type { SetupConfig, ToolDef, ToolType } from '../../src/types';
+import type { MachineTemplate, SetupConfig, ToolDef, ToolType } from '../../src/types';
 import { CHANNEL_COLORS } from '../../src/config/defaults';
 
 const TOOL_TYPES: ToolType[] = [
@@ -18,7 +18,8 @@ export class ConfigPanel {
 
   constructor(
     private readonly host: HTMLElement,
-    private readonly onSave: (setup: SetupConfig) => void
+    private readonly onSave: (setup: SetupConfig) => void,
+    private readonly templates: MachineTemplate[] = []
   ) {
     this.host.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
@@ -26,7 +27,16 @@ export class ConfigPanel {
       if (t.dataset.act === 'save') this.save();
       if (t.dataset.act === 'add-tool') this.addToolRow();
       if (t.dataset.act === 'del-tool') t.closest('tr')?.remove();
+      if (t.dataset.act === 'apply-template') this.applyTemplate();
     });
+  }
+
+  private applyTemplate(): void {
+    const sel = this.host.querySelector('#tpl-select') as HTMLSelectElement | null;
+    const tpl = this.templates.find((x) => x.id === sel?.value);
+    if (!tpl) return;
+    this.setup = structuredClone(tpl.setup);
+    this.render();
   }
 
   setSetup(setup: SetupConfig): void {
@@ -54,6 +64,25 @@ export class ConfigPanel {
         <button data-act="close" class="ghost">✕</button>
       </header>
       <div class="cfg-body">
+        ${
+          this.templates.length
+            ? `<section class="wide">
+          <h3>Machine template</h3>
+          <label>Load standard machine
+            <span>
+              <select id="tpl-select">${this.templates
+                .map(
+                  (t) =>
+                    `<option value="${t.id}"${s.template === t.id ? ' selected' : ''}>${t.name}</option>`
+                )
+                .join('')}</select>
+              <button data-act="apply-template" class="ghost small">Load</button>
+            </span>
+          </label>
+          <p class="muted" style="margin:4px 0 0;font-size:11px;opacity:.7">Loading a template replaces the fields below with that machine's standard configuration. You can still edit everything afterward.</p>
+        </section>`
+            : ''
+        }
         <section>
           <h3>Kinematics</h3>
           <label>Mode
@@ -66,6 +95,7 @@ export class ConfigPanel {
             <select id="dialect">
               <option value="fanuc"${m.dialect === 'fanuc' ? ' selected' : ''}>Fanuc</option>
               <option value="mitsubishi"${m.dialect === 'mitsubishi' ? ' selected' : ''}>Mitsubishi</option>
+              <option value="citizen"${m.dialect === 'citizen' ? ' selected' : ''}>Citizen Cincom</option>
             </select>
           </label>
           <label class="chk"><input type="checkbox" id="dia"${m.diameterMode ? ' checked' : ''}/> X values are diameters</label>

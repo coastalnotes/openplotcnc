@@ -3,6 +3,7 @@ import { BackplotterPanel } from './webview/editorPanel';
 import { HomeViewProvider } from './webview/sidebarView';
 import { loadSetup, saveSetup } from './webview/setupIo';
 import { defaultSetup } from './config/defaults';
+import { templateSetup } from './machines';
 
 const GCODE_GLOB = '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}';
 
@@ -43,6 +44,14 @@ export function activate(context: vscode.ExtensionContext): void {
           await scaffoldSetup();
         }
       })();
+    },
+    async (id, doc) => {
+      const next = templateSetup(id);
+      if (!next) return;
+      await saveSetup(next, doc?.uri);
+      if (BackplotterPanel.current) await BackplotterPanel.current.reloadPublic();
+      await home.refresh();
+      vscode.window.setStatusBarMessage(`OpenPlotCNC: loaded ${id}`, 2500);
     }
   );
 

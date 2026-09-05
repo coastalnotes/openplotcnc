@@ -70,6 +70,7 @@ export function renderHtml(
     </div>
     <div id="transport"></div>
     <div id="config-modal" hidden></div>
+    <div id="help-modal" hidden></div>
     <div id="toast" hidden></div>
   </div>
   <script nonce="${n}">

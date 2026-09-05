@@ -5,7 +5,7 @@
  * so this file must stay free of `vscode` and DOM imports.
  */
 
-export type Dialect = 'fanuc' | 'mitsubishi';
+export type Dialect = 'fanuc' | 'mitsubishi' | 'citizen';
 
 export type KinematicsMode = 'standard-lathe' | 'swiss-type';
 
@@ -282,9 +282,26 @@ export interface ToolDef {
 
 export interface SetupConfig {
   version: 1;
+  /** Id of the machine template this setup was seeded from, if any. */
+  template?: string;
   machine: MachineConfig;
   stock: StockConfig;
   tools: ToolDef[];
+}
+
+/** A loadable machine definition — standard axes, tool stations, kinematics. */
+export interface MachineTemplate {
+  id: string;
+  name: string;
+  vendor: string;
+  summary: string;
+  /** Reference URL / documentation note. */
+  reference: string;
+  /** Machine-specific programming notes shown in the help panel. */
+  notes: string[];
+  /** Controlled axis names, for reference display. */
+  axes: string[];
+  setup: SetupConfig;
 }
 
 /* ------------------------------------------------------------------ *
@@ -324,6 +341,8 @@ export type WebviewToHost =
   | { type: 'ready' }
   | { type: 'requestChannels' }
   | { type: 'pickProgram' }
+  | { type: 'pickMachine' }
+  | { type: 'loadMachine'; templateId: string }
   | { type: 'edit'; channel: number; text: string; uri?: string }
   | { type: 'cursor'; channel: number; line: number }
   | { type: 'openConfig' }
