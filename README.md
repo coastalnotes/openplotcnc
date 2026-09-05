@@ -10,18 +10,52 @@ CNC machines. Runs on Windows, macOS and Linux.
 
 ## Features
 
+### The app
+
+- **Activity-Bar panel** — OpenPlotCNC has its own icon in the sidebar. Pick a
+  program, see the channels it splits into, load a machine, open the backplotter.
+- **Fusion 360-style ribbon** — Home / Simulate / View / Setup / Help tabs with
+  large labelled buttons. Built for machinists, not VS Code power users.
+- **Backplot is manual** — the editor + alignment show immediately; the 3D
+  simulation builds only when you press *Run Backplot*.
+
+### Machine templates
+
+Load a standard machine and its tool list, then customise:
+
+| Template | Notes |
+| --- | --- |
+| **Citizen Cincom L12-VII** | 12 mm Swiss, 2 tool systems, Citizen (Meldas) control, 5 live spindles, standard T11xx / T21xx / T31xx stations |
+| **Citizen Cincom L12-X** | as VII plus the Y2 back axis, 7 live spindles |
+| **Generic Swiss (Fanuc, 2 paths)** | neutral starting point |
+| **Generic Lathe (Fanuc, 1 path)** | fixed-headstock turning centre |
+
+Templates live in [`machines/`](machines/) as plain JSON — copy and hand-edit
+them, or point `openplotcnc.machine.template` at one. Loading a template seeds
+`openplotcnc.setup.json` next to your program.
+
 ### Multi-channel editor (up to 4 paths)
 
 - **Multi-file projects** — `PATH1.NC` … `PATH4.NC` linked through the workspace.
-- **Single-file multi-channel** — `$1`…`$4` or `O1001`…`O1004` section markers,
-  split in place.
+- **Single-file multi-channel** — `$1`…`$4` (or `O1001`…) section markers, split
+  in place. Sections end at `M99`, `M30` or `M02`; a `$0` common/variable block
+  is kept aside; `M98 P####` / `M98 H####` subprograms are expanded into the plot.
 - **Synchronized columns** — 2–4 Monaco editors side by side with scroll and
   edit locking.
 - **Wait-code alignment engine** — shared rendezvous codes are pinned to the same
   visual row across every participating channel:
   - Fanuc: `M100`–`M199`, `M<code> P<mask>`, `WAITCODE n`
   - Mitsubishi: `!L1`–`!Ln`, `! n`, `M100`
+  - Citizen: `!L2`, `!1L2`, `!12L2` (systems 1 & 2), `!1!2L2`, and `M600`–`M699`
+    queue / waiting M-codes
 - Custom G-code syntax highlighting, folding and line decorations.
+
+### In-app help
+
+A dialect- and machine-aware reference panel (Help tab): getting started, how
+files split, wait/sync codes for *your* control, canned cycles, polar /
+cylindrical interpolation, Swiss kinematics, tooling, and the machine notes for
+the loaded template.
 
 ### CNC control engine
 

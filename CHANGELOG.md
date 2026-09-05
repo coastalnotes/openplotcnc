@@ -3,6 +3,28 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Activity-Bar view container with a launcher panel (pick program, see channels,
+  load machine, open backplotter).
+- Fusion 360-style tabbed ribbon (Home / Simulate / View / Setup / Help).
+- Machine templates: Citizen Cincom L12-VII, Citizen Cincom L12-X, generic Swiss
+  (Fanuc), generic lathe (Fanuc), as hand-editable `machines/*.json`.
+- `citizen` control dialect: `!nLm` line-up codes with participating tool
+  systems, `!1!2L2` multi-system form, and `M600`–`M699` queue / waiting M-codes.
+- Single-file split now cuts channels at `M99` as well as `M30`/`M02`, routes the
+  `$0` common/variable section aside, and expands `M98 P####` / `M98 H####`
+  subprograms into the backplot.
+- Dialect- and machine-aware in-app help / reference panel.
+- Manual backplot: the 3D simulation builds on demand instead of on open.
+
+### Changed
+
+- `.PRG`/`.prg` and other controller extensions register as G-code.
+- `dist/` is cleaned before packaging (no sourcemaps in the VSIX).
+
 ## [0.1.0] — 2026-09-05
 
 ### Added

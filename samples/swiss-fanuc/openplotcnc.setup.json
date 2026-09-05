@@ -1,67 +1,154 @@
 {
   "version": 1,
+  "template": "citizen-l12vii",
   "machine": {
     "kinematicsMode": "swiss-type",
-    "dialect": "mitsubishi",
+    "dialect": "citizen",
     "diameterMode": true,
     "units": "mm",
     "guideBushingZ": 0,
-    "mainSpindleFaceZ": -20,
+    "mainSpindleFaceZ": -18,
     "subSpindle": {
       "enabled": true,
-      "homeZ": 260,
-      "pickupZ": 40
+      "homeZ": 240,
+      "pickupZ": 36
     },
     "channels": [
       {
         "id": 1,
-        "name": "Path 1",
+        "name": "$1 Gang / Main",
         "spindle": "main",
         "color": "#22d3ee",
-        "file": "PATH1.NC",
         "marker": "$1"
       },
       {
         "id": 2,
-        "name": "Path 2",
+        "name": "$2 Back / Sub",
         "spindle": "sub",
         "color": "#f59e0b",
-        "file": "PATH2.NC",
         "marker": "$2"
       }
     ]
   },
   "stock": {
-    "outerDiameter": 20,
+    "outerDiameter": 12,
     "innerDiameter": 0,
     "length": 300,
-    "protrusion": 15,
-    "material": "AISI 1215"
+    "protrusion": 12,
+    "material": "303 stainless"
   },
   "tools": [
     {
-      "id": "t1-od",
+      "id": "T1100",
       "channel": 1,
-      "station": "T0101",
+      "station": "T1100",
       "type": "od-turn",
       "orientation": "main",
       "noseRadius": 0.4
     },
     {
-      "id": "t1-part",
+      "id": "T1200",
       "channel": 1,
-      "station": "T0303",
-      "type": "part-off",
+      "station": "T1200",
+      "type": "od-turn",
       "orientation": "main",
-      "width": 2
+      "noseRadius": 0.2
     },
     {
-      "id": "t2-back",
+      "id": "T1300",
+      "channel": 1,
+      "station": "T1300",
+      "type": "part-off",
+      "orientation": "main",
+      "width": 1.5
+    },
+    {
+      "id": "T1400",
+      "channel": 1,
+      "station": "T1400",
+      "type": "groove",
+      "orientation": "main",
+      "width": 1
+    },
+    {
+      "id": "T1500",
+      "channel": 1,
+      "station": "T1500",
+      "type": "thread",
+      "orientation": "main",
+      "noseRadius": 0.05
+    },
+    {
+      "id": "T1600",
+      "channel": 1,
+      "station": "T1600",
+      "type": "endmill-radial",
+      "orientation": "radial",
+      "diameter": 4
+    },
+    {
+      "id": "T1700",
+      "channel": 1,
+      "station": "T1700",
+      "type": "drill",
+      "orientation": "radial",
+      "diameter": 3
+    },
+    {
+      "id": "T2100",
+      "channel": 1,
+      "station": "T2100",
+      "type": "drill",
+      "orientation": "axial",
+      "diameter": 1.5
+    },
+    {
+      "id": "T2200",
+      "channel": 1,
+      "station": "T2200",
+      "type": "drill",
+      "orientation": "axial",
+      "diameter": 4
+    },
+    {
+      "id": "T2300",
+      "channel": 1,
+      "station": "T2300",
+      "type": "tap",
+      "orientation": "axial",
+      "diameter": 3
+    },
+    {
+      "id": "T3100",
       "channel": 2,
-      "station": "T0505",
+      "station": "T3100",
       "type": "od-turn",
       "orientation": "sub",
       "noseRadius": 0.2
+    },
+    {
+      "id": "T3200",
+      "channel": 2,
+      "station": "T3200",
+      "type": "drill",
+      "orientation": "axial",
+      "diameter": 2
+    },
+    {
+      "id": "T3300",
+      "channel": 2,
+      "station": "T3300",
+      "type": "id-bore",
+      "orientation": "sub",
+      "noseRadius": 0.1
+    },
+    {
+      "id": "T3400",
+      "channel": 2,
+      "station": "T3400",
+      "type": "tap",
+      "orientation": "axial",
+      "diameter": 3
     }
   ]
 }
