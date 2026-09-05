@@ -151,11 +151,15 @@ body {
 #app[data-layout="3d"] #editors-pane { display: none; }
 
 #editors-pane, #viewport-pane {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
 }
+#editors-pane > .pane-header, #viewport-pane > .pane-header { flex: none; }
+#editors { flex: 1; min-height: 0; }
+#viewport { flex: 1; min-height: 0; }
+#sync-report { flex: none; }
 .pane-header {
   display: flex;
   align-items: baseline;
