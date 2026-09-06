@@ -115,6 +115,7 @@ export function helpSections(dialect: Dialect, template?: MachineTemplate): Help
         '2. Choose the CNC program to load. A single file with $1 / $2 / $3 sections is split into channels automatically; separate PATH1.NC / PATH2.NC files are linked by the workspace.',
         '3. The channels appear side-by-side with their wait codes lined up. Nothing is simulated yet.',
         '4. Press Run Backplot to build the 3D toolpath, then use the Simulate tab to step or play through it.',
+        '5. Home ▸ Show limits the plot: All paths, Front ($1 / main spindle), Back ($2 / sub spindle), or just the lines selected in the editor.',
       ],
     },
     {

@@ -18,6 +18,10 @@ export type RibbonAction =
   | 'backplot'
   | 'clear'
   | 'review'
+  | 'scope-all'
+  | 'scope-front'
+  | 'scope-back'
+  | 'scope-selection'
   | 'play'
   | 'rewind'
   | 'stepBack'
@@ -87,6 +91,15 @@ const TABS: Tab[] = [
           { action: 'backplot', label: 'Run\nBackplot', glyph: '▶︎', size: 'lg', primary: true },
           { action: 'clear', label: 'Clear', glyph: '⌫', size: 'sm' },
           { action: 'review', label: 'Review', glyph: '✓', size: 'sm' },
+        ],
+      },
+      {
+        title: 'Show',
+        buttons: [
+          { action: 'scope-all', label: 'All\npaths', glyph: '▦', size: 'sm', segment: 'scope', on: true },
+          { action: 'scope-front', label: 'Front\n($1)', glyph: '◐', size: 'sm', segment: 'scope' },
+          { action: 'scope-back', label: 'Back\n($2)', glyph: '◑', size: 'sm', segment: 'scope' },
+          { action: 'scope-selection', label: 'Selected\nlines', glyph: '⊟', size: 'sm', segment: 'scope' },
         ],
       },
     ],

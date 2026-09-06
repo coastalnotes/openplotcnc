@@ -26,6 +26,19 @@ let backplotActive = false;
 let liveTimer: number | undefined;
 let subprograms = new Map<number, string>();
 
+type BackplotScope = 'all' | 'front' | 'back' | 'selection';
+let scope: BackplotScope = readStoredScope();
+
+function readStoredScope(): BackplotScope {
+  try {
+    const v = localStorage.getItem('opc.scope');
+    if (v === 'front' || v === 'back' || v === 'selection' || v === 'all') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'all';
+}
+
 /** Channel texts with `M98` subprogram calls expanded, for parsing/backplot. */
 function resolvedTexts() {
   return editor.channelTexts().map((t) => ({
@@ -46,6 +59,13 @@ const editor = new MultiChannelEditor(el('editors'), {
     if (backplotActive) scheduleLiveRebuild();
   },
   onCursor: (channel, line) => send({ type: 'cursor', channel, line }),
+});
+
+let selectionTimer: number | undefined;
+editor.onSelectionChange(() => {
+  if (scope !== 'selection') return;
+  if (selectionTimer) window.clearTimeout(selectionTimer);
+  selectionTimer = window.setTimeout(() => runBackplot(), 350);
 });
 
 const config = new ConfigPanel(el('config-modal'), (next) => {
@@ -132,6 +152,12 @@ function onRibbon(a: RibbonAction): void {
       break;
     case 'review':
       openReview();
+      break;
+    case 'scope-all':
+    case 'scope-front':
+    case 'scope-back':
+    case 'scope-selection':
+      setScope(a.replace('scope-', '') as BackplotScope);
       break;
     case 'play':
       animator.toggle();
@@ -222,16 +248,86 @@ function onRibbon(a: RibbonAction): void {
   }
 }
 
+function setScope(next: BackplotScope): void {
+  scope = next;
+  try {
+    localStorage.setItem('opc.scope', next);
+  } catch {
+    /* ignore */
+  }
+  ribbon.setSegment('scope', `scope-${next}` as RibbonAction);
+  if (backplotActive) runBackplot();
+}
+
+/** Filter a solved schedule down to the current backplot scope. */
+function applyScope(full: Schedule): { schedule: Schedule; label: string } {
+  if (scope === 'all') return { schedule: full, label: 'all paths' };
+
+  if (scope === 'front' || scope === 'back') {
+    const want = scope === 'front' ? 'main' : 'sub';
+    const channels = full.channels.filter((c) => channelSpace(setup, c.channel) === want);
+    return {
+      schedule: { ...full, channels, duration: Math.max(0, ...channels.map((c) => c.endWall)) },
+      label: `${scope} spindle`,
+    };
+  }
+
+  // 'selection' — keep only segments whose source line is selected.
+  const sel = editor.selections();
+  const channels = full.channels
+    .map((c) => {
+      const ranges = sel.get(c.channel);
+      if (!ranges) return { ...c, segments: [] };
+      let t = 0;
+      const segments = c.segments
+        .filter((s) => ranges.some(([a, b]) => s.sourceLine >= a && s.sourceLine <= b))
+        .map((s) => {
+          const seg = { ...s, tStartWall: t, tEndWall: t + s.durationSec };
+          t += s.durationSec;
+          return seg;
+        });
+      return { ...c, segments, endWall: t };
+    })
+    .filter((c) => c.segments.length > 0);
+  const total = sel.size === 0 ? 0 : channels.length;
+  return {
+    schedule: {
+      ...full,
+      channels,
+      barriers: [],
+      duration: Math.max(0, ...channels.map((c) => c.endWall)),
+    },
+    label: total === 0 ? 'nothing selected — select lines in the editor' : 'selected lines',
+  };
+}
+
 /* ---- backplot lifecycle (manual) ---- */
 function runBackplot(): void {
   const texts = resolvedTexts();
   if (texts.length === 0) return;
   const program = parseMultiChannel(texts, { dialect: setup.machine.dialect });
-  schedule = buildSchedule(program, setup);
+  const full = buildSchedule(program, setup);
+  const scoped = applyScope(full);
+  schedule = scoped.schedule;
   scene.setToolpaths(schedule.channels);
   scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
   animator.setSchedule(schedule);
   animator.seek(0);
+
+  ribbon.setSegment('scope', `scope-${scope}` as RibbonAction);
+
+  if (schedule.channels.length === 0) {
+    // Scope produced nothing (e.g. "Selected lines" with no selection).
+    backplotActive = false;
+    ribbon.setBackplotActive(false);
+    el('viewport-idle').hidden = false;
+    el('idle-hint-text').textContent =
+      scope === 'selection'
+        ? 'Select the G-code lines you want to plot, then Run Backplot.'
+        : `No ${scope}-spindle path in this program.`;
+    el('viewport-info').textContent = '';
+    return;
+  }
 
   backplotActive = true;
   ribbon.setBackplotActive(true);
@@ -240,7 +336,8 @@ function runBackplot(): void {
 
   const moves = schedule.channels.reduce((n, c) => n + c.segments.length, 0);
   el('viewport-info').textContent =
-    `${schedule.channels.length} paths · ${moves} moves · ${schedule.duration.toFixed(1)} s cycle`;
+    `${scoped.label} · ${schedule.channels.length} path${schedule.channels.length === 1 ? '' : 's'} · ` +
+    `${moves} moves · ${schedule.duration.toFixed(1)} s`;
 
   // Run mode doubles as an error check — surface it when there is something to see.
   const issues = review.refresh(rawTexts(), setup.machine.dialect);
@@ -358,6 +455,7 @@ function applySetup(): void {
   ribbon.setMode(
     `${tpl ? tpl.name + '  ·  ' : ''}${km} · ${DIALECT_LABEL[setup.machine.dialect]}`
   );
+  ribbon.setSegment('scope', `scope-${scope}` as RibbonAction);
   ribbon.setSegment('km', setup.machine.kinematicsMode === 'swiss-type' ? 'km-swiss' : 'km-lathe');
   ribbon.setSegment(
     'dialect',

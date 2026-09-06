@@ -66,7 +66,7 @@ export function renderHtml(
               <div class="idle-glyph">▤</div>
               <p>Channels are split and aligned on the left.</p>
               <button id="idle-run" class="big-primary">Run Backplot</button>
-              <p class="idle-hint">Nothing is simulated until you run it.</p>
+              <p class="idle-hint" id="idle-hint-text">Nothing is simulated until you run it.</p>
             </div>
           </div>
         </div>

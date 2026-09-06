@@ -28,6 +28,7 @@ export class MultiChannelEditor {
   private suppressScroll = false;
   private editDebounce: number | undefined;
   private alignment: AlignmentResult | undefined;
+  private readonly selectionListeners: (() => void)[] = [];
 
   constructor(root: HTMLElement, private readonly opts: MultiChannelOptions) {
     registerGcodeLanguage();
@@ -153,6 +154,10 @@ export class MultiChannelEditor {
       this.opts.onCursor(ce.id, e.position.lineNumber - 1);
     });
 
+    editor.onDidChangeCursorSelection(() => {
+      for (const cb of this.selectionListeners) cb();
+    });
+
     return ce;
   }
 
@@ -272,6 +277,28 @@ export class MultiChannelEditor {
       name: c.name,
       source: c.model.getValue(),
     }));
+  }
+
+  /** Non-empty editor selections per channel, as inclusive 0-based line ranges. */
+  selections(): Map<number, [number, number][]> {
+    const out = new Map<number, [number, number][]>();
+    for (const ce of this.channels) {
+      const ranges: [number, number][] = [];
+      for (const sel of ce.editor.getSelections() ?? []) {
+        if (sel.startLineNumber === sel.endLineNumber && sel.startColumn === sel.endColumn) continue;
+        // A selection ending at column 1 of a line doesn't really include that line.
+        const end = sel.endColumn === 1 && sel.endLineNumber > sel.startLineNumber
+          ? sel.endLineNumber - 2
+          : sel.endLineNumber - 1;
+        ranges.push([sel.startLineNumber - 1, Math.max(sel.startLineNumber - 1, end)]);
+      }
+      if (ranges.length) out.set(ce.id, ranges);
+    }
+    return out;
+  }
+
+  onSelectionChange(cb: () => void): void {
+    this.selectionListeners.push(cb);
   }
 
   layout(): void {

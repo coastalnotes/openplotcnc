@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "template": "citizen-l12vii",
+  "template": "citizen-l12x",
   "machine": {
     "kinematicsMode": "swiss-type",
     "dialect": "citizen",
@@ -82,14 +82,22 @@
       "id": "T1600",
       "channel": 1,
       "station": "T1600",
-      "type": "endmill-radial",
-      "orientation": "radial",
-      "diameter": 4
+      "type": "id-bore",
+      "orientation": "main",
+      "noseRadius": 0.1
     },
     {
       "id": "T1700",
       "channel": 1,
       "station": "T1700",
+      "type": "endmill-radial",
+      "orientation": "radial",
+      "diameter": 4
+    },
+    {
+      "id": "T1800",
+      "channel": 1,
+      "station": "T1800",
       "type": "drill",
       "orientation": "radial",
       "diameter": 3
@@ -115,6 +123,14 @@
       "channel": 1,
       "station": "T2300",
       "type": "tap",
+      "orientation": "axial",
+      "diameter": 3
+    },
+    {
+      "id": "T2400",
+      "channel": 1,
+      "station": "T2400",
+      "type": "endmill-axial",
       "orientation": "axial",
       "diameter": 3
     },
@@ -149,6 +165,22 @@
       "type": "tap",
       "orientation": "axial",
       "diameter": 3
+    },
+    {
+      "id": "T3500",
+      "channel": 2,
+      "station": "T3500",
+      "type": "endmill-radial",
+      "orientation": "radial",
+      "diameter": 3
+    },
+    {
+      "id": "T3600",
+      "channel": 2,
+      "station": "T3600",
+      "type": "groove",
+      "orientation": "sub",
+      "width": 0.8
     }
   ]
 }
