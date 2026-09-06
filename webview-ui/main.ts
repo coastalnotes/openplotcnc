@@ -8,6 +8,7 @@ import { Animator } from './render/animator';
 import { mountTransport } from './playback/controls';
 import { ConfigPanel } from './config/configPanel';
 import { HelpPanel } from './ui/helpPanel';
+import { ReviewPanel } from './ui/reviewPanel';
 import { Ribbon, type RibbonAction } from './ui/ribbon';
 import { parseMultiChannel, expandSubprograms } from '../src/parser';
 import { alignChannels } from '../src/channels/alignment';
@@ -56,10 +57,22 @@ const config = new ConfigPanel(el('config-modal'), (next) => {
 }, MACHINE_TEMPLATES);
 
 const help = new HelpPanel(el('help-modal'));
+const review = new ReviewPanel(el('review-panel'), (channel, line) => {
+  editor.revealChannelLine(channel, line);
+});
 
 const ribbon = new Ribbon(el('ribbon'), onRibbon);
 mountTransport(el('transport'), animator);
 el('idle-run').addEventListener('click', runBackplot);
+
+/** Raw channel text (what the columns show) for alignment / review. */
+function rawTexts() {
+  return editor.channelTexts().map((t) => ({
+    channel: t.channel,
+    name: t.name,
+    source: t.source,
+  }));
+}
 
 /* ---- pane layout (Code + 3D / Code only / 3D only) ---- */
 type Layout = 'split' | 'editor' | '3d';
@@ -90,11 +103,17 @@ function setLayout(mode: Layout): void {
 el('btn-expand-editor').addEventListener('click', () => {
   setLayout(el('app').dataset.layout === 'editor' ? 'split' : 'editor');
 });
-el('btn-sync-report').addEventListener('click', () => {
-  toggleSyncReport();
-  el('btn-sync-report').classList.toggle('on', !el('sync-report').hidden);
-});
+el('btn-review').addEventListener('click', () => openReview());
 setLayout(readStoredLayout());
+
+function openReview(): void {
+  review.toggle(rawTexts(), setup.machine.dialect);
+  const btn = el('btn-review');
+  btn.classList.toggle('on', review.visible);
+  btn.classList.toggle('has-issues', review.issueCount > 0);
+  btn.textContent = review.issueCount > 0 ? `Review · ${review.issueCount}` : 'Review';
+  requestAnimationFrame(() => editor.layout());
+}
 
 /* ---- ribbon actions ---- */
 function onRibbon(a: RibbonAction): void {
@@ -107,13 +126,12 @@ function onRibbon(a: RibbonAction): void {
       break;
     case 'backplot':
       runBackplot();
-      ribbon.showTab('simulate');
       break;
     case 'clear':
       clearBackplot();
       break;
-    case 'sync-report':
-      toggleSyncReport();
+    case 'review':
+      openReview();
       break;
     case 'play':
       animator.toggle();
@@ -204,38 +222,6 @@ function onRibbon(a: RibbonAction): void {
   }
 }
 
-function toggleSyncReport(): void {
-  const box = el('sync-report');
-  if (!box.hidden) {
-    box.hidden = true;
-    return;
-  }
-  // The report describes the columns the user sees — align on the raw text.
-  const raw = editor.channelTexts().map((t) => ({
-    channel: t.channel,
-    name: t.name,
-    source: t.source,
-  }));
-  const align = alignChannels(parseMultiChannel(raw, { dialect: setup.machine.dialect }));
-  if (align.barriers.length === 0) {
-    box.innerHTML = `<div class="sr-empty">No wait / sync codes found across channels.</div>`;
-  } else {
-    box.innerHTML = align.barriers
-      .map((b) => {
-        const parts = [...b.participants.entries()]
-          .map(([ch, ln]) => `CH${ch}·L${ln + 1}`)
-          .join('  ');
-        return `<div class="sr-row ${b.matched ? 'ok' : 'warn'}">
-          <span class="sr-id">${b.raw || b.id}</span>
-          <span class="sr-parts">${parts}</span>
-          <span class="sr-flag">${b.matched ? 'aligned' : 'only 1 channel'}</span>
-        </div>`;
-      })
-      .join('');
-  }
-  box.hidden = false;
-}
-
 /* ---- backplot lifecycle (manual) ---- */
 function runBackplot(): void {
   const texts = resolvedTexts();
@@ -255,6 +241,13 @@ function runBackplot(): void {
   const moves = schedule.channels.reduce((n, c) => n + c.segments.length, 0);
   el('viewport-info').textContent =
     `${schedule.channels.length} paths · ${moves} moves · ${schedule.duration.toFixed(1)} s cycle`;
+
+  // Run mode doubles as an error check — surface it when there is something to see.
+  const issues = review.refresh(rawTexts(), setup.machine.dialect);
+  el('btn-review').classList.toggle('has-issues', issues > 0);
+  el('btn-review').textContent = issues > 0 ? `Review · ${issues}` : 'Review';
+  if (issues > 0 && !review.visible) openReview();
+  ribbon.showTab('simulate');
 }
 
 function clearBackplot(): void {
@@ -390,6 +383,11 @@ function updateChannelsInfo(): void {
   if (texts.length > 1) parts.push(`${matched} sync point${matched === 1 ? '' : 's'} aligned`);
   if (subCount) parts.push(`${subCount} subprogram${subCount === 1 ? '' : 's'}`);
   el('channels-info').textContent = parts.join(' · ');
+
+  const issues = review.refresh(rawTexts(), setup.machine.dialect);
+  const btn = el('btn-review');
+  btn.classList.toggle('has-issues', issues > 0);
+  btn.textContent = issues > 0 ? `Review · ${issues}` : 'Review';
 }
 
 animator.subscribe((frame) => {

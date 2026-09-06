@@ -30,7 +30,7 @@ import { lexLine } from './gcodeLexer';
 import { detectSync } from './syncCodes';
 import {
   extractSubprograms,
-  truncateAtProgramEnd,
+  findProgramEndLine,
   type SplitProgram,
 } from './subprograms';
 
@@ -97,17 +97,39 @@ function diag(
   return { severity, message, line, col, length };
 }
 
+export interface ChannelSlice {
+  text: string;
+  /** channel-line index -> 0-based line in the original file. */
+  sourceLines: number[];
+}
+
 /**
  * Split a single physical file into per-channel sources using section markers
  * (`$1`..`$4`, `O1001`..`O1004`, or custom). Returns a map keyed by channel id.
  * If no markers are found the whole file is returned as channel 1.
  */
-export function splitChannels(
+export function splitChannels(text: string, markers: string[]): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const [ch, slice] of splitChannelsDetailed(text, markers)) out.set(ch, slice.text);
+  return out;
+}
+
+/** As {@link splitChannels}, but also returns each slice's source-line mapping. */
+export function splitChannelsDetailed(
   text: string,
   markers: string[]
-): Map<number, string> {
+): Map<number, ChannelSlice> {
   const lines = text.split(/\r?\n/);
   const result = new Map<number, string[]>();
+  const resultLines = new Map<number, number[]>();
+  const push = (ch: number, line: string, srcIdx: number) => {
+    if (!result.has(ch)) {
+      result.set(ch, []);
+      resultLines.set(ch, []);
+    }
+    result.get(ch)!.push(line);
+    resultLines.get(ch)!.push(srcIdx);
+  };
 
   // Native `$1`..`$4` section markers, plus any configured aliases
   // (e.g. `O1001`..`O1004`) mapped to channels by their position in the list.
@@ -133,53 +155,58 @@ export function splitChannels(
   };
 
   let current = 0;
-  let sawMarker = false;
   let sawChannel = false;
   const preamble: string[] = [];
+  const preambleLines: number[] = [];
   const common: string[] = [];
+  const commonLines: number[] = [];
 
-  for (const line of lines) {
+  lines.forEach((line, srcIdx) => {
     const ch = markerChannel(line);
     if (ch !== undefined) {
       current = ch;
-      sawMarker = true;
       if (ch >= 1) {
         sawChannel = true;
-        if (!result.has(current)) result.set(current, []);
+        if (!result.has(current)) {
+          result.set(current, []);
+          resultLines.set(current, []);
+        }
       }
-      continue; // the marker line itself is not program content
+      return; // the marker line itself is not program content
     }
     if (current === COMMON) {
       common.push(line);
-      continue;
+      commonLines.push(srcIdx);
+      return;
     }
     if (current === 0) {
-      preamble.push(line); // content before the first `$n`
-      continue;
+      preamble.push(line);
+      preambleLines.push(srcIdx);
+      return;
     }
-    if (!result.has(current)) result.set(current, []);
-    result.get(current)!.push(line);
-  }
+    push(current, line, srcIdx);
+  });
 
-  void sawMarker;
   // A file with only `$0` (no real channels) is a plain single program.
   if (!sawChannel) {
-    return new Map([[1, text]]);
+    return new Map([[1, { text, sourceLines: lines.map((_, i) => i) }]]);
   }
 
   // Attach any preamble (program number, safe-start block, header comments)
   // to the lowest-numbered channel.
   const firstChannel = Math.min(...result.keys());
   if (preamble.some((l) => l.trim() !== '')) {
-    const body = result.get(firstChannel) ?? [];
-    result.set(firstChannel, [...preamble, ...body]);
+    result.set(firstChannel, [...preamble, ...(result.get(firstChannel) ?? [])]);
+    resultLines.set(firstChannel, [...preambleLines, ...(resultLines.get(firstChannel) ?? [])]);
   }
 
-  const out = new Map<number, string>();
-  for (const [ch, ls] of [...result.entries()].sort((a, b) => a[0] - b[0])) {
-    out.set(ch, ls.join('\n'));
+  const out = new Map<number, ChannelSlice>();
+  for (const [ch] of [...result.entries()].sort((a, b) => a[0] - b[0])) {
+    out.set(ch, { text: result.get(ch)!.join('\n'), sourceLines: resultLines.get(ch)! });
   }
-  if (common.some((l) => l.trim() !== '')) out.set(COMMON, common.join('\n'));
+  if (common.some((l) => l.trim() !== '')) {
+    out.set(COMMON, { text: common.join('\n'), sourceLines: commonLines });
+  }
   return out;
 }
 
@@ -189,17 +216,22 @@ export function splitChannels(
  * subprograms collected from the trailing area (never from channel bodies).
  */
 export function splitProgram(text: string, markers: string[]): SplitProgram {
-  const raw = splitChannels(text, markers);
+  const raw = splitChannelsDetailed(text, markers);
   const channels = new Map<number, string>();
+  const sourceLineMap = new Map<number, number[]>();
   const tails: string[] = [];
 
   // `$0` common / variable section (key -1) is kept aside for write-back only.
-  const commonSection = raw.get(-1) ?? '';
+  const commonSection = raw.get(-1)?.text ?? '';
   raw.delete(-1);
 
-  for (const [id, src] of raw) {
-    const { body, tail } = truncateAtProgramEnd(src);
-    channels.set(id, body);
+  for (const [id, slice] of raw) {
+    const end = findProgramEndLine(slice.text);
+    const keep = end < 0 ? slice.text.split(/\r?\n/).length : end + 1;
+    const bodyLines = slice.text.split(/\r?\n/);
+    channels.set(id, bodyLines.slice(0, keep).join('\n'));
+    sourceLineMap.set(id, slice.sourceLines.slice(0, keep));
+    const tail = bodyLines.slice(keep).join('\n');
     if (tail.trim() !== '') tails.push(tail);
   }
   if (commonSection.trim() !== '') tails.push(`$0\n${commonSection}`);
@@ -212,7 +244,7 @@ export function splitProgram(text: string, markers: string[]): SplitProgram {
     subprograms = extractSubprograms(text);
   }
 
-  return { channels, subprograms, trailer };
+  return { channels, subprograms, trailer, sourceLineMap };
 }
 
 export function parseChannel(
@@ -309,6 +341,26 @@ export function parseChannel(
       return;
     }
 
+    // ---- lexical checks ---------------------------------------------
+    const opens = (rawLine.match(/\[/g) ?? []).length;
+    const closes = (rawLine.match(/\]/g) ?? []).length;
+    if (opens !== closes) {
+      diagnostics.push(
+        diag('error', 'Unbalanced [ ] brackets', sourceLine, 0, rawLine.length)
+      );
+    }
+    const seenAddr = new Set<string>();
+    for (const w of words) {
+      if ('XYZUVWCABIJKR'.includes(w.letter)) {
+        if (seenAddr.has(w.letter)) {
+          diagnostics.push(
+            diag('warning', `Address ${w.letter} appears more than once on this block`, sourceLine, w.col, w.raw.length)
+          );
+        }
+        seenAddr.add(w.letter);
+      }
+    }
+
     // ---- modal updates -------------------------------------------------
     applyModal(modal, words, opts, sourceLine, diagnostics);
 
@@ -339,6 +391,14 @@ export function parseChannel(
     if ((motion === 'arc-cw' || motion === 'arc-ccw') && !arc) {
       diagnostics.push(
         diag('error', 'Arc move without I/J/K offset or R radius', sourceLine, 0, rawLine.length)
+      );
+    }
+
+    // ---- feed on a cutting move -----------------------------------
+    const isCut = motion === 'linear' || motion === 'arc-cw' || motion === 'arc-ccw';
+    if (isCut && Object.keys(coords).length > 0 && (feed === undefined || feed <= 0)) {
+      diagnostics.push(
+        diag('warning', 'Feed move with no active feedrate (F)', sourceLine, 0, rawLine.length)
       );
     }
 

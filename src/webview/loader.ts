@@ -10,6 +10,8 @@ export interface LoadedChannel {
   uri?: string;
   /** Section marker (single-file mode). */
   marker?: string;
+  /** channel-line index -> 0-based line in the physical source file. */
+  sourceLines?: number[];
 }
 
 export interface ChannelSet {
@@ -67,6 +69,7 @@ export async function loadChannels(
         name: channelName(setup, id),
         text: chunk,
         marker: markerList[id - 1] ?? `$${id}`,
+        sourceLines: split.sourceLineMap.get(id),
       });
     }
     const subprograms: Record<number, string> = {};

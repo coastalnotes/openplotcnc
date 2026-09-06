@@ -7,5 +7,6 @@ export * from './parser';
 export * from './kinematics';
 export * from './channels/alignment';
 export * from './simulation/timeline';
+export * from './validate/review';
 export * from './config/defaults';
 export * from './config/schema';

@@ -23,18 +23,24 @@ export function isProgramEnd(line: string): boolean {
   return END_RE.test(codeOnly(line));
 }
 
+/** Index of the first program-end line (`M99`/`M30`/`M02`), or -1. */
+export function findProgramEndLine(source: string): number {
+  const lines = source.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (END_RE.test(codeOnly(lines[i]))) return i;
+  }
+  return -1;
+}
+
 /** Split a channel slice into its body (through the first program-end) + tail. */
 export function truncateAtProgramEnd(source: string): { body: string; tail: string } {
   const lines = source.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    if (END_RE.test(codeOnly(lines[i]))) {
-      return {
-        body: lines.slice(0, i + 1).join('\n'),
-        tail: lines.slice(i + 1).join('\n'),
-      };
-    }
-  }
-  return { body: source, tail: '' };
+  const end = findProgramEndLine(source);
+  if (end < 0) return { body: source, tail: '' };
+  return {
+    body: lines.slice(0, end + 1).join('\n'),
+    tail: lines.slice(end + 1).join('\n'),
+  };
 }
 
 /**
@@ -73,6 +79,8 @@ export interface SplitProgram {
   subprograms: Map<number, string>;
   /** Everything the split moved out of channel bodies (subprograms, footer). */
   trailer: string;
+  /** channel id -> (channel-line index -> 0-based line in the original file). */
+  sourceLineMap: Map<number, number[]>;
 }
 
 interface ExpandOptions {

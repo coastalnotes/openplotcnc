@@ -46,11 +46,11 @@ export function renderHtml(
           <span class="pane-title">Channels</span>
           <span class="pane-info" id="channels-info"></span>
           <span class="pane-actions">
-            <button id="btn-sync-report" class="pane-btn" title="Show / hide the wait-code report">Sync codes</button>
+            <button id="btn-review" class="pane-btn" title="Review: syntax errors + sync-code check">Review</button>
             <button id="btn-expand-editor" class="pane-btn" title="Toggle the 3D pane">Widen ⤢</button>
           </span>
         </header>
-        <div id="sync-report" hidden></div>
+        <div id="review-panel" hidden></div>
         <div id="editors"></div>
       </section>
       <div id="gutter" title="Drag to resize"></div>

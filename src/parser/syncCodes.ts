@@ -15,11 +15,17 @@
  *   - `!Ln` / `!n`                   line-up without an explicit system list
  *   - `M6xx` (M600..M699)            queue / waiting M-code sequence
  *   - `G6xx` (G600..G699)            queue / waiting G-code sequence (e.g. G600, G630)
+ *   - `G9xx` (G900..G999)            end / cycle sequence codes (e.g. G999 "one cycle")
  *   - `M100`..`M199`                 also accepted (some posts emit these)
  */
 
-/** G6xx sync ids are offset so they never collide with M-code ids. */
+/** G-sync ids are offset so they never collide with M-code ids. */
 const G_SYNC_OFFSET = 1000;
+
+/** A Citizen G-code that acts as a queue / line-up / sequence rendezvous. */
+export function isCitizenSyncGCode(code: number): boolean {
+  return (code >= 600 && code <= 699) || (code >= 900 && code <= 999);
+}
 
 import type { Dialect, SyncToken, Word } from '../types';
 
@@ -88,10 +94,10 @@ export function detectSync(
     };
   }
 
-  // Citizen G6xx queue / waiting sequence (G600, G630, …).
+  // Citizen queue / line-up / end-sequence G-codes (G600, G630, G999, …).
   if (dialect === 'citizen') {
     const g = words.find(
-      (w) => w.letter === 'G' && Number.isFinite(w.value) && w.value >= 600 && w.value <= 699
+      (w) => w.letter === 'G' && Number.isFinite(w.value) && isCitizenSyncGCode(w.value)
     );
     if (g) {
       const code = Math.round(g.value);
@@ -135,6 +141,7 @@ export function isPureSyncCode(code: number, dialect: Dialect): boolean {
   if (dialect === 'citizen') return (code >= 100 && code <= 199) || (code >= 600 && code <= 699);
   return code === 100;
 }
+
 
 /** Human label for a sync id (undoes the G6xx id offset). */
 export function syncIdLabel(id: number): string {

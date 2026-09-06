@@ -17,7 +17,7 @@ export type RibbonAction =
   | 'reload'
   | 'backplot'
   | 'clear'
-  | 'sync-report'
+  | 'review'
   | 'play'
   | 'rewind'
   | 'stepBack'
@@ -86,7 +86,7 @@ const TABS: Tab[] = [
         buttons: [
           { action: 'backplot', label: 'Run\nBackplot', glyph: '▶︎', size: 'lg', primary: true },
           { action: 'clear', label: 'Clear', glyph: '⌫', size: 'sm' },
-          { action: 'sync-report', label: 'Sync\nReport', glyph: '⇄', size: 'sm' },
+          { action: 'review', label: 'Review', glyph: '✓', size: 'sm' },
         ],
       },
     ],

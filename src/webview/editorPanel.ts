@@ -4,6 +4,7 @@ import { assembleSingleFile, loadChannels, type ChannelSet } from './loader';
 import { loadSetup, saveSetup } from './setupIo';
 import { parseMultiChannel } from '../parser';
 import { alignChannels } from '../channels/alignment';
+import { reviewProgram } from '../validate/review';
 import { MACHINE_TEMPLATES, templateSetup } from '../machines';
 import type {
   ChannelPayload,
@@ -33,6 +34,7 @@ export class BackplotterPanel {
   private editTimer: NodeJS.Timeout | undefined;
   private pendingEdits = new Map<number, string>();
   private pendingLayout: 'split' | 'editor' | '3d' | undefined;
+  private readonly diagnostics = vscode.languages.createDiagnosticCollection('openplotcnc');
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -48,6 +50,7 @@ export class BackplotterPanel {
 
     this.panel.webview.html = renderHtml(this.panel.webview, this.context.extensionUri);
 
+    this.disposables.push(this.diagnostics);
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.panel.webview.onDidReceiveMessage(
       (m: WebviewToHost) => this.onMessage(m),
@@ -162,6 +165,58 @@ export class BackplotterPanel {
       mode: this.channelSet.mode,
       theme: themeKind(),
     });
+    this.publishDiagnostics();
+  }
+
+  /** Publish the program review to the VS Code Problems panel. */
+  private publishDiagnostics(): void {
+    const program = parseMultiChannel(
+      this.channelSet.channels.map((c) => ({
+        channel: c.id,
+        name: c.name,
+        source: c.text,
+        uri: c.uri,
+      })),
+      { dialect: this.setup.machine.dialect }
+    );
+    const review = reviewProgram(program);
+
+    const byUri = new Map<string, vscode.Diagnostic[]>();
+    const put = (uri: string, d: vscode.Diagnostic) => {
+      if (!byUri.has(uri)) byUri.set(uri, []);
+      byUri.get(uri)!.push(d);
+    };
+
+    for (const f of review.findings) {
+      const ch = this.channelSet.channels.find((c) => c.id === f.channel);
+      if (!ch) continue;
+      let targetUri: string | undefined;
+      let srcLine = f.line;
+      if (this.channelSet.mode === 'single-file') {
+        targetUri = this.channelSet.sourceUri;
+        srcLine = ch.sourceLines?.[f.line] ?? f.line;
+      } else {
+        targetUri = ch.uri;
+      }
+      if (!targetUri) continue;
+      const sev =
+        f.severity === 'error'
+          ? vscode.DiagnosticSeverity.Error
+          : f.severity === 'warning'
+            ? vscode.DiagnosticSeverity.Warning
+            : vscode.DiagnosticSeverity.Information;
+      const d = new vscode.Diagnostic(
+        new vscode.Range(srcLine, 0, srcLine, 500),
+        `[${ch.name}] ${f.message}`,
+        sev
+      );
+      d.source = 'OpenPlotCNC';
+      d.code = f.category;
+      put(targetUri, d);
+    }
+
+    this.diagnostics.clear();
+    for (const [uri, ds] of byUri) this.diagnostics.set(vscode.Uri.parse(uri), ds);
   }
 
   private programName(): string {
@@ -335,6 +390,12 @@ export class BackplotterPanel {
     } finally {
       this.applyingRemoteEdit = false;
     }
+
+    if (this.channelSet.mode === 'single-file') {
+      // Re-split so the source-line map (used for Problems) tracks the edit.
+      this.channelSet = await loadChannels(this.primary, this.setup);
+    }
+    this.publishDiagnostics();
   }
 
   private onDocChanged(e: vscode.TextDocumentChangeEvent): void {
@@ -359,6 +420,7 @@ export class BackplotterPanel {
       program: this.programName(),
       mode: this.channelSet.mode,
     });
+    this.publishDiagnostics();
   }
 
   dispose(): void {
