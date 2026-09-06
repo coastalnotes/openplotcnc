@@ -28,27 +28,6 @@ test('templates: L12-X exposes the Y2 axis, VII does not', () => {
   assert.ok(!getTemplate('citizen-l12vii')!.axes.includes('Y2'));
 });
 
-test('templates: carry a machine geometry for the 3D model', () => {
-  const x = getTemplate('citizen-l12x')!.setup.machine.geometry!;
-  assert.equal(x.model, 'Citizen Cincom L12-X');
-  assert.equal(x.mainSpindle.maxRpm, 15000);
-  assert.equal(x.mainSpindle.collet, 'FC096-M');
-  assert.equal(x.subSpindle.maxRpm, 12000);
-  assert.ok(x.subSpindle.y2Stroke > 0);
-  assert.equal(getTemplate('citizen-l12vii')!.setup.machine.geometry!.subSpindle.y2Stroke, 0);
-  assert.ok(x.gangPost.turningStations >= 5);
-  assert.ok(x.backPost.rotaryStations === 4 && x.backPost.fixedStations === 4);
-});
-
-test('a setup round-trips its geometry through normalizeSetup', async () => {
-  const { normalizeSetup } = await import('../config/schema');
-  const { templateSetup } = await import('../machines');
-  const seed = templateSetup('citizen-l12x')!;
-  const { setup } = normalizeSetup(JSON.parse(JSON.stringify(seed)));
-  assert.equal(setup.machine.geometry!.mainSpindle.maxRpm, 15000);
-  assert.equal(setup.machine.geometry!.model, 'Citizen Cincom L12-X');
-});
-
 test('templates: every template has a unique id and a generic fallback exists', () => {
   const ids = MACHINE_TEMPLATES.map((t) => t.id);
   assert.equal(new Set(ids).size, ids.length);

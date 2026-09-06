@@ -8,7 +8,6 @@
 
 import type { MachineTemplate, SetupConfig } from '../types';
 import { normalizeSetup } from '../config/schema';
-import { DEFAULT_GEOMETRY, L12VII_GEOMETRY, L12X_GEOMETRY } from '../config/geometry';
 
 import citizenL12vii from '../../machines/citizen-l12vii.json';
 import citizenL12x from '../../machines/citizen-l12x.json';
@@ -17,15 +16,9 @@ import genericLatheFanuc from '../../machines/generic-lathe-fanuc.json';
 
 const RAW: unknown[] = [citizenL12vii, citizenL12x, genericSwissFanuc, genericLatheFanuc];
 
-const GEOMETRY: Record<string, typeof DEFAULT_GEOMETRY> = {
-  'citizen-l12x': L12X_GEOMETRY,
-  'citizen-l12vii': L12VII_GEOMETRY,
-};
-
 function coerce(raw: any): MachineTemplate {
   const { setup } = normalizeSetup(raw.setup);
   setup.template = raw.id;
-  setup.machine.geometry = GEOMETRY[String(raw.id)] ?? DEFAULT_GEOMETRY;
   return {
     id: String(raw.id),
     name: String(raw.name),
