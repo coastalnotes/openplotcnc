@@ -6,6 +6,7 @@ import { parseMultiChannel } from '../parser';
 import { alignChannels } from '../channels/alignment';
 import { reviewProgram } from '../validate/review';
 import { MACHINE_TEMPLATES, templateSetup } from '../machines';
+import { browseForProgram } from './pickers';
 import type {
   ChannelPayload,
   HostToWebview,
@@ -269,19 +270,9 @@ export class BackplotterPanel {
         await this.reload();
         break;
       case 'pickProgram': {
-        const uris = await vscode.workspace.findFiles(
-          '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}',
-          '**/node_modules/**',
-          200
-        );
-        const pick = await vscode.window.showQuickPick(
-          uris
-            .map((u) => ({ label: vscode.workspace.asRelativePath(u), uri: u }))
-            .sort((a, b) => a.label.localeCompare(b.label)),
-          { title: 'Select the CNC program to load' }
-        );
-        if (pick) {
-          this.primary = await vscode.workspace.openTextDocument(pick.uri);
+        const picked = await browseForProgram(this.primary.uri);
+        if (picked) {
+          this.primary = await vscode.workspace.openTextDocument(picked);
           await this.reload();
         }
         break;

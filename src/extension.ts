@@ -3,8 +3,7 @@ import { BackplotterPanel } from './webview/editorPanel';
 import { HomeViewProvider } from './webview/sidebarView';
 import { loadSetup, saveSetup } from './webview/setupIo';
 import { defaultSetup } from './config/defaults';
-
-const GCODE_GLOB = '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}';
+import { browseForProgram } from './webview/pickers';
 
 async function pickGcodeDocument(): Promise<vscode.TextDocument | undefined> {
   const active = vscode.window.activeTextEditor?.document;
@@ -15,18 +14,8 @@ async function pickGcodeDocument(): Promise<vscode.TextDocument | undefined> {
   ) {
     return active;
   }
-  const picks = await vscode.workspace.findFiles(GCODE_GLOB, '**/node_modules/**', 50);
-  if (picks.length === 0) {
-    void vscode.window.showErrorMessage('OpenPlotCNC: no G-code file found. Open a folder with your NC programs.');
-    return undefined;
-  }
-  const choice = await vscode.window.showQuickPick(
-    picks
-      .map((u) => ({ label: vscode.workspace.asRelativePath(u), uri: u }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-    { title: 'Select the CNC program to load' }
-  );
-  return choice ? vscode.workspace.openTextDocument(choice.uri) : undefined;
+  const picked = await browseForProgram(active?.uri);
+  return picked ? vscode.workspace.openTextDocument(picked) : undefined;
 }
 
 export function activate(context: vscode.ExtensionContext): void {

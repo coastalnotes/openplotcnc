@@ -5,6 +5,7 @@ import { parseMultiChannel } from '../parser';
 import { alignChannels } from '../channels/alignment';
 import { CHANNEL_COLORS } from '../config/defaults';
 import { MACHINE_TEMPLATES } from '../machines';
+import { browseForFolder, browseForProgram } from './pickers';
 
 const GCODE_GLOB = '**/*.{nc,NC,cnc,CNC,gcode,g,mpf,MPF,ngc,tap,TAP,eia,EIA,min,MIN,pim,PIM,prg,PRG,sub,SUB,mpr,MPR}';
 
@@ -116,7 +117,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
           this.onOpenSetup();
           break;
         case 'openFolder':
-          void vscode.commands.executeCommand('workbench.action.files.openFolder');
+          await browseForFolder();
           break;
       }
     });
@@ -148,20 +149,10 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async chooseProgram(): Promise<void> {
-    const uris = await vscode.workspace.findFiles(GCODE_GLOB, '**/node_modules/**', 200);
-    if (uris.length === 0) {
-      void vscode.window.showInformationMessage('OpenPlotCNC: no NC programs found in this folder.');
-      return;
-    }
-    const pick = await vscode.window.showQuickPick(
-      uris
-        .map((u) => ({ label: vscode.workspace.asRelativePath(u), uri: u }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-      { title: 'Select the CNC program to load' }
-    );
-    if (pick) {
-      this.target = pick.uri;
-      this.onOpenBackplotter(await vscode.workspace.openTextDocument(pick.uri));
+    const picked = await browseForProgram(this.target ?? (await this.targetDocument())?.uri);
+    if (picked) {
+      this.target = picked;
+      this.onOpenBackplotter(await vscode.workspace.openTextDocument(picked));
       void this.refresh();
     }
   }
