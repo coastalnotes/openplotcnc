@@ -125,6 +125,23 @@ test('G600 appears once in the barrier list even when repeated', () => {
   assert.deepEqual(raws, ['G600']);
 });
 
+test('the longest channel occupies the final row (so bottom-padding is derivable)', () => {
+  const prog = parseMultiChannel(
+    [
+      { channel: 1, name: '$1', source: Array.from({ length: 60 }, (_, i) => `G1 X${i}`).join('\n') },
+      { channel: 2, name: '$2', source: '!L1\nG1 X0\nM99' },
+    ],
+    { dialect: 'fanuc' }
+  );
+  // no shared barrier here -> single-channel-ish, still every source line placed
+  const r = alignChannels(prog);
+  const lastRow = r.rows[r.rows.length - 1];
+  const c1 = r.channels.indexOf(1);
+  assert.notEqual(lastRow.cells[c1].line, null);
+  // channel 1's last source line (59) maps to the last row
+  assert.equal(r.lineToRow.get(1)!.get(59), r.rows.length - 1);
+});
+
 test('every row has one cell per channel', () => {
   const prog = parseMultiChannel(
     [

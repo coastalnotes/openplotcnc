@@ -191,6 +191,11 @@ export class MultiChannelEditor {
         if (gap > 0) gaps.push({ afterLine: i, lines: gap }); // afterLineNumber = i (0-based line before)
         prevRow = row;
       }
+      // Pad the bottom so every column has the same total scroll height —
+      // otherwise scroll-sync clamps everyone to the shortest channel and you
+      // can't reach the end of the longer one.
+      const trailingPad = align.rows.length - 1 - prevRow;
+      if (trailingPad > 0) gaps.push({ afterLine: total, lines: trailingPad });
       this.applyViewZones(ce, gaps);
 
       // Barrier highlight decorations.
