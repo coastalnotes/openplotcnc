@@ -130,11 +130,17 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     this.lastLaunch = Date.now();
     let doc = await this.targetDocument();
     if (!doc) {
-      // Fall back to the single program in the folder, if there is exactly one.
-      const uris = await vscode.workspace.findFiles(GCODE_GLOB, '**/node_modules/**', 6);
-      if (uris.length === 1) {
-        this.target = uris[0];
-        doc = await vscode.workspace.openTextDocument(uris[0]);
+      const uris = await vscode.workspace.findFiles(GCODE_GLOB, '**/node_modules/**', 30);
+      const firstGlob = (
+        vscode.workspace.getConfiguration('openplotcnc').get<string[]>('channels.fileGlobs') ?? []
+      )[0];
+      // Prefer PATH1.NC-style entry point, else the only program in the folder.
+      const pick =
+        (firstGlob && uris.find((u) => u.path.toLowerCase().endsWith(firstGlob.toLowerCase()))) ||
+        (uris.length === 1 ? uris[0] : undefined);
+      if (pick) {
+        this.target = pick;
+        doc = await vscode.workspace.openTextDocument(pick);
       }
     }
     if (doc) this.onOpenBackplotter(doc);
