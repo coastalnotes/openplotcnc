@@ -5,6 +5,7 @@
 
 import type { SetupConfig, ToolType } from '../types';
 import { defaultSetup } from './defaults';
+import { normalizeGeometry } from './geometry';
 
 export const SETUP_JSON_SCHEMA = {
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -167,6 +168,7 @@ export function normalizeSetup(input: unknown): {
             marker: typeof c?.marker === 'string' ? c.marker : undefined,
           }))
         : base.machine.channels,
+      geometry: normalizeGeometry(m.geometry),
     },
     stock: {
       outerDiameter: num(s.outerDiameter, base.stock.outerDiameter, 'stock.outerDiameter'),

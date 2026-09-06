@@ -1,4 +1,5 @@
 import type { Dialect, KinematicsMode, SetupConfig } from '../types';
+import { DEFAULT_GEOMETRY } from './geometry';
 
 export const CHANNEL_COLORS = ['#22d3ee', '#f59e0b', '#e879f9', '#4ade80'];
 
@@ -31,6 +32,7 @@ export function defaultSetup(
         pickupZ: 40,
       },
       channels,
+      geometry: DEFAULT_GEOMETRY,
     },
     stock: {
       outerDiameter: 20,

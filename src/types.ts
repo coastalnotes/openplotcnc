@@ -247,6 +247,62 @@ export interface MachineConfig {
     pickupZ: number;
   };
   channels: ChannelConfig[];
+  /** Physical model for the 3D machine render (optional). */
+  geometry?: MachineGeometry;
+}
+
+/**
+ * Physical dimensions for drawing the machine in the 3D viewport. All millimetres.
+ * Values are representative where the manufacturer does not publish an exact
+ * figure (axis strokes in particular).
+ */
+export interface MachineGeometry {
+  model: string;
+  base: { width: number; depth: number; height: number };
+  guideBushing: {
+    present: boolean;
+    outerDiameter: number;
+    holderWidth: number;
+    holderHeight: number;
+  };
+  mainSpindle: {
+    bodyLength: number;
+    bodyDiameter: number;
+    noseLength: number;
+    z1Stroke: number;
+    maxRpm: number;
+    collet: string;
+  };
+  subSpindle: {
+    bodyLength: number;
+    bodyDiameter: number;
+    noseLength: number;
+    z2Stroke: number;
+    x2Stroke: number;
+    y2Stroke: number;
+    maxRpm: number;
+    collet: string;
+  };
+  gangPost: {
+    plateWidth: number;
+    plateHeight: number;
+    plateThickness: number;
+    x1Stroke: number;
+    y1Stroke: number;
+    turningStations: number;
+    liveStations: number;
+    /** Axial position of the tool tips (world Z), usually ~ guide bushing face. */
+    faceZ: number;
+    /** Radial clearance of the plate above the spindle centreline when parked. */
+    parkClearance: number;
+  };
+  backPost: {
+    present: boolean;
+    plateWidth: number;
+    plateHeight: number;
+    fixedStations: number;
+    rotaryStations: number;
+  };
 }
 
 export interface StockConfig {

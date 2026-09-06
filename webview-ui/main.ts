@@ -505,6 +505,9 @@ animator.subscribe((frame) => {
     const mainId = mainChannelId();
     const mainCh = schedule.channels.find((c) => c.channel === mainId);
     const st = frame.channels.get(mainId);
+    // Follow the gang tool post radially with the main-spindle tool.
+    const mainSeg = mainCh && st ? mainCh.segments[st.segIndex] : undefined;
+    scene.setGangRadius(mainSeg && !mainSeg.rapid && !st?.waiting ? st!.pos.x : undefined);
     if (mainCh && st && mainCh.segments[st.segIndex]) {
       const subCh = schedule.channels.find((c) => channelSpace(setup, c.channel) === 'sub');
       const subSt = subCh ? frame.channels.get(subCh.channel) : undefined;

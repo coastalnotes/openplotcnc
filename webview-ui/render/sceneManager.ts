@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { SetupConfig, Vec3 } from '../../src/types';
 import { buildChannelPath, progressCount, toThree, type ChannelPath } from './toolpathBuilder';
+import { buildMachineModel, type MachineModel } from './machineModel';
+import { DEFAULT_GEOMETRY } from '../../src/config/geometry';
 import type { ScheduledChannel } from '../../src/simulation/timeline';
 
 const CHANNEL_COLORS = [0x22d3ee, 0xf59e0b, 0xe879f9, 0x4ade80];
@@ -16,9 +18,7 @@ export class SceneManager {
   private readonly paths = new THREE.Group();
   private readonly tools = new THREE.Group();
   private grid!: THREE.GridHelper;
-  private mainSpindle = new THREE.Group();
-  private subSpindle = new THREE.Group();
-  private stock: THREE.Mesh | undefined;
+  private model: MachineModel | undefined;
   private channelPaths: ChannelPath[] = [];
   private toolMarkers = new Map<number, THREE.Mesh>();
   private setup: SetupConfig | undefined;
@@ -53,7 +53,6 @@ export class SceneManager {
     this.scene.add(axes);
 
     this.world.add(this.machine, this.paths, this.tools);
-    this.machine.add(this.mainSpindle, this.subSpindle);
     this.scene.add(this.world);
 
     this.loop();
@@ -76,65 +75,11 @@ export class SceneManager {
 
   private buildMachine(): void {
     if (!this.setup) return;
+    this.model?.dispose();
     this.machine.clear();
-    this.mainSpindle = new THREE.Group();
-    this.subSpindle = new THREE.Group();
-    this.machine.add(this.mainSpindle, this.subSpindle);
-
-    const m = this.setup.machine;
-    const s = this.setup.stock;
-    const od = s.outerDiameter;
-
-    // Guide bushing (fixed) at world axial = guideBushingZ.
-    const bushing = new THREE.Mesh(
-      new THREE.TorusGeometry(od * 0.75, Math.max(1.5, od * 0.15), 12, 32),
-      new THREE.MeshStandardMaterial({ color: 0x8899aa, metalness: 0.6, roughness: 0.4 })
-    );
-    bushing.rotation.y = Math.PI / 2;
-    bushing.position.set(m.guideBushingZ, 0, 0);
-    if (m.kinematicsMode === 'swiss-type') this.machine.add(bushing);
-
-    // Main spindle body — a chuck cylinder behind its face.
-    const spLen = 60;
-    const spindleBody = new THREE.Mesh(
-      new THREE.CylinderGeometry(od * 1.1, od * 1.1, spLen, 24),
-      new THREE.MeshStandardMaterial({ color: 0x445066, metalness: 0.5, roughness: 0.5 })
-    );
-    spindleBody.rotation.z = Math.PI / 2;
-    spindleBody.position.set(-spLen / 2, 0, 0);
-    this.mainSpindle.add(spindleBody);
-    this.mainSpindle.position.set(m.mainSpindleFaceZ, 0, 0);
-
-    // Bar stock — from the spindle face forward past the bushing.
-    const stockLen = Math.max(s.length, m.guideBushingZ - m.mainSpindleFaceZ + s.protrusion + 10);
-    const stockGeom =
-      s.innerDiameter > 0
-        ? new THREE.CylinderGeometry(od / 2, od / 2, stockLen, 32, 1, true)
-        : new THREE.CylinderGeometry(od / 2, od / 2, stockLen, 32);
-    this.stock = new THREE.Mesh(
-      stockGeom,
-      new THREE.MeshStandardMaterial({
-        color: 0xb8b8b8,
-        metalness: 0.75,
-        roughness: 0.35,
-        side: s.innerDiameter > 0 ? THREE.DoubleSide : THREE.FrontSide,
-      })
-    );
-    this.stock.rotation.z = Math.PI / 2;
-    this.stock.position.set(stockLen / 2, 0, 0);
-    this.mainSpindle.add(this.stock);
-
-    // Sub spindle.
-    if (m.subSpindle.enabled) {
-      const subBody = new THREE.Mesh(
-        new THREE.CylinderGeometry(od * 1.1, od * 1.1, spLen, 24),
-        new THREE.MeshStandardMaterial({ color: 0x4a3b52, metalness: 0.5, roughness: 0.5 })
-      );
-      subBody.rotation.z = Math.PI / 2;
-      subBody.position.set(spLen / 2, 0, 0);
-      this.subSpindle.add(subBody);
-      this.subSpindle.position.set(m.subSpindle.homeZ, 0, 0);
-    }
+    const geo = this.setup.machine.geometry ?? DEFAULT_GEOMETRY;
+    this.model = buildMachineModel(this.setup, geo);
+    this.machine.add(this.model.root);
   }
 
   setToolpaths(channels: ScheduledChannel[]): void {
@@ -235,8 +180,17 @@ export class SceneManager {
   }
 
   setHeadstock(z: number, subZ?: number): void {
-    this.mainSpindle.position.x = z;
-    if (subZ !== undefined) this.subSpindle.position.x = subZ;
+    if (!this.model) return;
+    this.model.headstock.position.x = z;
+    if (subZ !== undefined) this.model.subCarriage.position.x = subZ;
+  }
+
+  /** Drop the gang tool post to the current cutting radius (three.js Y). */
+  setGangRadius(radius: number | undefined): void {
+    if (!this.model) return;
+    const park = this.model.gangParkY;
+    this.model.gangSlide.position.y =
+      radius === undefined ? park : Math.max(radius + 6, Math.min(park, radius + 6));
   }
 
   frameAll(): void {
