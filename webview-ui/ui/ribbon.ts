@@ -86,6 +86,13 @@ const TABS: Tab[] = [
         ],
       },
       {
+        title: 'Machine',
+        buttons: [
+          { action: 'load-machine', label: 'Load\nMachine', glyph: '🛠', size: 'lg' },
+          { action: 'setup', label: 'Setup', glyph: '⚙', size: 'sm' },
+        ],
+      },
+      {
         title: 'Backplot',
         buttons: [
           { action: 'backplot', label: 'Run\nBackplot', glyph: '▶︎', size: 'lg', primary: true },
@@ -100,6 +107,14 @@ const TABS: Tab[] = [
           { action: 'scope-front', label: 'Front\n($1)', glyph: '◐', size: 'sm', segment: 'scope' },
           { action: 'scope-back', label: 'Back\n($2)', glyph: '◑', size: 'sm', segment: 'scope' },
           { action: 'scope-selection', label: 'Selected\nlines', glyph: '⊟', size: 'sm', segment: 'scope' },
+        ],
+      },
+      {
+        title: 'View',
+        buttons: [
+          { action: 'layout-editor', label: 'Code\nonly', glyph: '▥', size: 'sm', segment: 'layout' },
+          { action: 'layout-split', label: 'Code +\n3D', glyph: '▤', size: 'sm', segment: 'layout' },
+          { action: 'layout-3d', label: '3D\nonly', glyph: '◨', size: 'sm', segment: 'layout' },
         ],
       },
     ],
@@ -136,14 +151,6 @@ const TABS: Tab[] = [
     id: 'view',
     label: 'View',
     panels: [
-      {
-        title: 'Layout',
-        buttons: [
-          { action: 'layout-split', label: 'Code +\n3D', glyph: '▤', size: 'sm', segment: 'layout', on: true },
-          { action: 'layout-editor', label: 'Code\nonly', glyph: '▥', size: 'sm', segment: 'layout' },
-          { action: 'layout-3d', label: '3D\nonly', glyph: '◨', size: 'sm', segment: 'layout' },
-        ],
-      },
       {
         title: 'Camera',
         buttons: [

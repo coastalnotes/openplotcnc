@@ -28,7 +28,57 @@
         "color": "#f59e0b",
         "marker": "$2"
       }
-    ]
+    ],
+    "geometry": {
+      "model": "Citizen Cincom L12-X",
+      "base": {
+        "width": 560,
+        "depth": 430,
+        "height": 300
+      },
+      "guideBushing": {
+        "present": true,
+        "outerDiameter": 30,
+        "holderWidth": 44,
+        "holderHeight": 130
+      },
+      "mainSpindle": {
+        "bodyLength": 240,
+        "bodyDiameter": 96,
+        "noseLength": 24,
+        "z1Stroke": 205,
+        "maxRpm": 15000,
+        "collet": "FC096-M"
+      },
+      "subSpindle": {
+        "bodyLength": 150,
+        "bodyDiameter": 78,
+        "noseLength": 20,
+        "z2Stroke": 205,
+        "x2Stroke": 90,
+        "y2Stroke": 40,
+        "maxRpm": 12000,
+        "collet": "F25"
+      },
+      "gangPost": {
+        "plateWidth": 160,
+        "plateHeight": 130,
+        "plateThickness": 24,
+        "x1Stroke": 110,
+        "y1Stroke": 60,
+        "turningStations": 5,
+        "liveStations": 5,
+        "faceZ": 0,
+        "parkClearance": 22
+      },
+      "backPost": {
+        "present": true,
+        "plateWidth": 130,
+        "plateHeight": 100,
+        "fixedStations": 4,
+        "rotaryStations": 4
+      }
+    }
   },
   "stock": {
     "outerDiameter": 12,

@@ -103,7 +103,7 @@ function readStoredLayout(): Layout {
   } catch {
     /* private mode */
   }
-  return 'split';
+  return 'editor'; // the split-channel editor is the landing view
 }
 function setLayout(mode: Layout): void {
   el('app').dataset.layout = mode;

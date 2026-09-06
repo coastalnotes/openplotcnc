@@ -38,7 +38,7 @@ export function renderHtml(
   <title>OpenPlotCNC Backplotter</title>
 </head>
 <body>
-  <div id="app" data-layout="split">
+  <div id="app" data-layout="editor">
     <div id="ribbon"></div>
     <div id="split">
       <section id="editors-pane">

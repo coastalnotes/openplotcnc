@@ -48,8 +48,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly onOpenBackplotter: (doc: vscode.TextDocument) => void,
-    private readonly onOpenSetup: () => void,
-    private readonly onLoadTemplate: (id: string, doc: vscode.TextDocument | undefined) => Promise<void>
+    private readonly onOpenSetup: () => void
   ) {
     context.subscriptions.push(
       vscode.window.onDidChangeActiveTextEditor((e) => {
@@ -76,6 +75,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     return undefined;
   }
 
+  private lastLaunch = 0;
+
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     view.webview.options = {
@@ -84,7 +85,13 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     };
     view.webview.html = this.html(view.webview);
 
-    view.webview.onDidReceiveMessage(async (m: { type: string; uri?: string; id?: string }) => {
+    // Opening the app drops the user straight into the split-channel editor.
+    view.onDidChangeVisibility(() => {
+      if (view.visible) void this.autoLaunch();
+    });
+    void this.autoLaunch();
+
+    view.webview.onDidReceiveMessage(async (m: { type: string; uri?: string }) => {
       switch (m.type) {
         case 'ready':
           void this.refresh();
@@ -95,6 +102,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         case 'pick':
           if (m.uri) {
             this.target = vscode.Uri.parse(m.uri);
+            this.onOpenBackplotter(await vscode.workspace.openTextDocument(this.target));
             void this.refresh();
           }
           break;
@@ -107,15 +115,29 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         case 'setup':
           this.onOpenSetup();
           break;
-        case 'loadMachine':
-          if (m.id) await this.onLoadTemplate(m.id, await this.targetDocument());
-          break;
         case 'openFolder':
           void vscode.commands.executeCommand('workbench.action.files.openFolder');
           break;
       }
     });
 
+    void this.refresh();
+  }
+
+  /** Open the backplotter (split-channel editor) when a program is available. */
+  private async autoLaunch(): Promise<void> {
+    if (Date.now() - this.lastLaunch < 1000) return;
+    this.lastLaunch = Date.now();
+    let doc = await this.targetDocument();
+    if (!doc) {
+      // Fall back to the single program in the folder, if there is exactly one.
+      const uris = await vscode.workspace.findFiles(GCODE_GLOB, '**/node_modules/**', 6);
+      if (uris.length === 1) {
+        this.target = uris[0];
+        doc = await vscode.workspace.openTextDocument(uris[0]);
+      }
+    }
+    if (doc) this.onOpenBackplotter(doc);
     void this.refresh();
   }
 
@@ -133,6 +155,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     );
     if (pick) {
       this.target = pick.uri;
+      this.onOpenBackplotter(await vscode.workspace.openTextDocument(pick.uri));
       void this.refresh();
     }
   }
@@ -241,6 +264,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
   .list button { text-align: left; padding: 5px 7px; border: none; border-radius: 4px;
     background: transparent; color: var(--vscode-foreground); cursor: pointer; width: 100%; }
   .list button:hover { background: var(--vscode-list-hoverBackground); }
+  .list button.cur { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
   .empty { text-align: center; opacity: .7; padding: 16px 4px; }
   select { width: 100%; padding: 5px; margin-bottom: 6px; background: var(--vscode-dropdown-background);
     color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; }
@@ -259,52 +283,35 @@ function render(s){
     return;
   }
   let h = '<div class="hero"><img src="'+LOGO+'"><b>OpenPlotCNC</b></div>';
-  h += '<div class="card"><h4>Program</h4>';
+  h += '<button class="primary" data-a="open">Open split-channel editor</button>';
+
+  h += '<div class="card"><h4>Loaded program</h4>';
   if(s.program){
     h += '<div class="prog">'+esc(s.program.name)+'</div>';
     h += '<div class="tags"><span class="tag">'+esc(s.mode==='single-file'?'single file':'multi file')+'</span>'+
+         (s.channels.length?'<span class="tag">'+s.channels.length+' ch</span>':'')+
          (s.kinematics?'<span class="tag">'+esc(s.kinematics)+'</span>':'')+
          (s.dialect?'<span class="tag">'+esc(s.dialect)+'</span>':'')+'</div>';
   } else {
-    h += '<div class="muted">No program selected.</div>';
+    h += '<div class="muted">No program loaded.</div>';
   }
-  h += '<button class="sec" data-a="choose">Choose program…</button></div>';
+  h += '<button class="sec" data-a="choose">Choose program…</button>';
+  h += '<button class="sec" data-a="setup">Machine &amp; tooling setup</button></div>';
 
-  if(s.channels.length){
-    h += '<div class="card"><h4>Channels ('+s.channels.length+')</h4>';
-    for(const c of s.channels){
-      h += '<div class="chan"><span class="dot" style="background:'+esc(c.color)+'"></span>'+
-           '<span class="n">'+esc(c.name)+'</span><span class="l">'+c.lines+' lines</span></div>';
-    }
-    if(s.channels.length>1) h += '<div class="muted" style="margin-top:6px">'+s.syncPoints+' sync point'+(s.syncPoints===1?'':'s')+' aligned</div>';
-    h += '</div>';
-  }
-
-  if(s.templates && s.templates.length){
-    h += '<div class="card"><h4>Machine</h4>';
-    h += '<select id="tpl">';
-    for(const t of s.templates) h += '<option value="'+esc(t.id)+'"'+(t.id===s.templateId?' selected':'')+'>'+esc(t.name)+'</option>';
-    h += '</select>';
-    h += '<button class="sec" data-a="loadMachine">Load machine template</button>';
-    h += '<div class="muted" style="margin-top:4px;font-size:11px">Sets kinematics, dialect and the standard tool list. Customise afterward in Setup.</div>';
-    h += '</div>';
-  }
-
-  h += '<button class="primary" data-a="open">Open Backplotter</button>';
-  h += '<button class="sec" data-a="setup">Machine &amp; Tooling Setup</button>';
-
-  if(s.found.length && !s.program){
+  if(s.found.length){
     h += '<div class="card"><h4>Programs in this folder</h4><div class="list">';
-    for(const f of s.found) h += '<button data-a="pick" data-uri="'+esc(f.uri)+'">'+esc(f.label)+'</button>';
+    for(const f of s.found){
+      const on = s.program && s.program.uri===f.uri;
+      h += '<button data-a="pick" data-uri="'+esc(f.uri)+'"'+(on?' class="cur"':'')+'>'+esc(f.label)+'</button>';
+    }
     h += '</div></div>';
   }
+  h += '<div class="muted" style="font-size:11px;text-align:center">Machine, channels and simulation controls are on the ribbon inside the editor.</div>';
   root.innerHTML = h;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if(!b) return;
-  const msg = { type: b.dataset.a, uri: b.dataset.uri };
-  if(b.dataset.a === 'loadMachine'){ const sel = document.getElementById('tpl'); msg.id = sel && sel.value; }
-  vscode.postMessage(msg);
+  vscode.postMessage({ type: b.dataset.a, uri: b.dataset.uri });
 });
 window.addEventListener('message', e => { if(e.data && e.data.type==='state') render(e.data.state); });
 vscode.postMessage({ type: 'ready' });
