@@ -96,6 +96,15 @@ test('parseLineup: id + participating systems', () => {
   assert.deepEqual(parseLineup('!3'), { id: 3, partners: [] });
 });
 
+test('syncCodes: Citizen M100-M199 are machine functions, not syncs', () => {
+  for (const code of ['M162', 'M163', 'M100', 'M199']) {
+    const s = detectSync(code, lexLine(code, 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
+    assert.equal(s, undefined, `${code} should not be a Citizen sync`);
+  }
+  // still a sync on Fanuc
+  assert.ok(detectSync('M100', lexLine('M100', 'fanuc').filter((t) => t.type === 'word') as any, undefined, 'fanuc'));
+});
+
 test('syncCodes: Citizen G6xx queue codes (G600, G630) are rendezvous', () => {
   const g600 = detectSync('G600', lexLine('G600', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');
   const g630 = detectSync('G630', lexLine('G630', 'citizen').filter((t) => t.type === 'word') as any, undefined, 'citizen');

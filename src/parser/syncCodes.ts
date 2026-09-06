@@ -16,7 +16,10 @@
  *   - `M6xx` (M600..M699)            queue / waiting M-code sequence
  *   - `G6xx` (G600..G699)            queue / waiting G-code sequence (e.g. G600, G630)
  *   - `G9xx` (G900..G999)            end / cycle sequence codes (e.g. G999 "one cycle")
- *   - `M100`..`M199`                 also accepted (some posts emit these)
+ *
+ * Note: on Citizen, `M100`..`M199` are machine functions (M162 part-ejector,
+ * M163 spot spindle, …), NOT waiting codes — only Fanuc treats that range as
+ * rendezvous.
  */
 
 /** G-sync ids are offset so they never collide with M-code ids. */
@@ -115,8 +118,9 @@ export function detectSync(
       return { kind: 'fanuc-mwait', id: code, partners: [], raw: `M${code}` };
     }
 
-    // Fanuc / Citizen M1xx rendezvous.
-    if ((dialect === 'fanuc' || dialect === 'citizen') && code >= 100 && code <= 199) {
+    // Fanuc M1xx rendezvous.  (NOT Citizen — there M1xx are machine-function
+    // codes like M162 part-ejector / M163 spot spindle, not waiting codes.)
+    if (dialect === 'fanuc' && code >= 100 && code <= 199) {
       const p = words.find((w) => w.letter === 'P');
       const partners = p ? decodePathMask(p.value) : [];
       return {
@@ -138,7 +142,7 @@ export function detectSync(
 /** True when the M-code is *only* a rendezvous and carries no machine action. */
 export function isPureSyncCode(code: number, dialect: Dialect): boolean {
   if (dialect === 'fanuc') return code >= 100 && code <= 199;
-  if (dialect === 'citizen') return (code >= 100 && code <= 199) || (code >= 600 && code <= 699);
+  if (dialect === 'citizen') return code >= 600 && code <= 699;
   return code === 100;
 }
 
