@@ -24,6 +24,8 @@ export interface Token {
   letter: string;
   /** Numeric value (NaN when not applicable / unresolved). */
   value: number;
+  /** Spindle / axis index for Citizen indexed assignments (`S1=6682` → 1). */
+  index?: number;
   raw: string;
   col: number;
 }
@@ -201,6 +203,25 @@ export function lexLine(line: string, dialect: Dialect): Token[] {
       while (i < n && /\s/.test(line[i])) i++;
       let numRaw = '';
       let value = NaN;
+      let index: number | undefined;
+
+      // Citizen indexed assignment:  S1=6682  ·  S2=4000  ·  E1=0.5  ·  S1MAX=4000
+      const assign = line.slice(i).match(/^(\d{0,2})(?:MAX|MIN)?\s*=\s*([-+]?\d*\.?\d+)/i);
+      if (assign) {
+        index = assign[1] === '' ? undefined : parseInt(assign[1], 10);
+        value = parseFloat(assign[2]);
+        const consumed = line.slice(i).indexOf(assign[2]) + assign[2].length;
+        i += consumed;
+        tokens.push({
+          type: 'word',
+          letter: upper,
+          value,
+          index,
+          raw: line.slice(start, i),
+          col: start,
+        });
+        continue;
+      }
 
       if (line[i] === '[') {
         // Bracket expression.
@@ -226,6 +247,7 @@ export function lexLine(line: string, dialect: Dialect): Token[] {
         type: 'word',
         letter: upper,
         value,
+        index,
         raw: line.slice(start, i),
         col: start,
       });

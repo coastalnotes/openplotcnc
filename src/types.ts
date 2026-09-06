@@ -36,12 +36,14 @@ export type MotionType =
   | 'dwell' // G04
   | 'none';
 
-/** A single address word, e.g. `G01`, `X-12.5`, `F0.08`. */
+/** A single address word, e.g. `G01`, `X-12.5`, `F0.08`, `S1=6682`. */
 export interface Word {
   /** Upper-case address letter. */
   letter: string;
   /** Numeric value, or `NaN` when the address had no parseable number. */
   value: number;
+  /** Spindle / axis index for Citizen indexed assignments (`S1=6682` → 1). */
+  index?: number;
   /** Raw text as it appeared in the source. */
   raw: string;
   /** Column offset within the source line. */

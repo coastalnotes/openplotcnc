@@ -19,6 +19,27 @@ test('lexer: address words, signs and decimals', () => {
   assert.equal(words.find((w) => w.letter === 'F')?.value, 0.2);
 });
 
+test('lexer: Citizen indexed assignment S1=6682 / S2=4000', () => {
+  const toks = lexLine('G97M3S1=6682', 'citizen').filter((t) => t.type === 'word');
+  const s = toks.find((w) => w.letter === 'S')!;
+  assert.equal(s.value, 6682);
+  assert.equal(s.index, 1);
+  // no stray "unknown" tokens from the '=' or digits
+  assert.equal(lexLine('G97M3S1=6682', 'citizen').filter((t) => t.type === 'unknown').length, 0);
+
+  const two = lexLine('G97M24M3S1=6682S2=6682', 'citizen').filter((t) => t.type === 'word');
+  assert.deepEqual(
+    two.filter((w) => w.letter === 'S').map((w) => [w.index, w.value]),
+    [[1, 6682], [2, 6682]]
+  );
+});
+
+test('parser: S1= sets the spindle speed', () => {
+  const prog = parseChannel('G97 M3 S1=5000\nG1 X1 F0.1', 1, 'P1', { dialect: 'citizen' });
+  assert.equal(prog.blocks.at(-1)!.spindleSpeed, 5000);
+  assert.equal(prog.diagnostics.length, 0);
+});
+
 test('lexer: comments in both styles', () => {
   const a = lexLine('G00 X1 (rapid to clearance)', 'fanuc');
   assert.equal(a.find((t) => t.type === 'comment')?.raw, '(rapid to clearance)');

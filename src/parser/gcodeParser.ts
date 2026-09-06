@@ -307,7 +307,7 @@ export function parseChannel(
           // Captured but not executed.
           break;
         case 'word': {
-          const w: Word = { letter: t.letter, value: t.value, raw: t.raw, col: t.col };
+          const w: Word = { letter: t.letter, value: t.value, index: t.index, raw: t.raw, col: t.col };
           if (t.letter === 'N' && Number.isFinite(t.value)) {
             nNumber = t.value;
           } else {
