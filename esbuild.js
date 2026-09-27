@@ -41,7 +41,7 @@ const extensionConfig = {
   external: ['vscode'],
 };
 
-/** Webview main bundle — browser ESM, contains Monaco + Three.js. */
+/** Webview main bundle — browser ESM, contains Monaco. */
 const webviewConfig = {
   ...base,
   entryPoints: { main: 'webview-ui/main.ts' },

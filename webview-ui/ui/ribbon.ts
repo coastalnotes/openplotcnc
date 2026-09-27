@@ -33,15 +33,9 @@ export type RibbonAction =
   | 'speed-5'
   | 'layout-split'
   | 'layout-editor'
-  | 'layout-3d'
   | 'view-fit'
-  | 'view-iso'
-  | 'view-top'
-  | 'view-front'
-  | 'view-right'
   | 'toggle-rapids'
   | 'toggle-grid'
-  | 'toggle-machine'
   | 'km-swiss'
   | 'km-lathe'
   | 'dialect-fanuc'
@@ -113,8 +107,7 @@ const TABS: Tab[] = [
         title: 'View',
         buttons: [
           { action: 'layout-editor', label: 'Code\nonly', glyph: '▥', size: 'sm', segment: 'layout' },
-          { action: 'layout-split', label: 'Code +\n3D', glyph: '▤', size: 'sm', segment: 'layout' },
-          { action: 'layout-3d', label: '3D\nonly', glyph: '◨', size: 'sm', segment: 'layout' },
+          { action: 'layout-split', label: 'Code +\nPlot', glyph: '▤', size: 'sm', segment: 'layout' },
         ],
       },
     ],
@@ -153,20 +146,13 @@ const TABS: Tab[] = [
     panels: [
       {
         title: 'Camera',
-        buttons: [
-          { action: 'view-fit', label: 'Fit', glyph: '⤢', size: 'lg' },
-          { action: 'view-iso', label: 'Iso', glyph: '◈', size: 'sm' },
-          { action: 'view-top', label: 'Top', glyph: '▦', size: 'sm' },
-          { action: 'view-front', label: 'Front', glyph: '▥', size: 'sm' },
-          { action: 'view-right', label: 'Right', glyph: '◨', size: 'sm' },
-        ],
+        buttons: [{ action: 'view-fit', label: 'Fit', glyph: '⤢', size: 'lg' }],
       },
       {
         title: 'Display',
         buttons: [
           { action: 'toggle-rapids', label: 'Rapids', glyph: '⇢', size: 'sm', toggle: true, on: true },
           { action: 'toggle-grid', label: 'Grid', glyph: '▩', size: 'sm', toggle: true, on: true },
-          { action: 'toggle-machine', label: 'Machine', glyph: '⛭', size: 'sm', toggle: true, on: true },
         ],
       },
     ],

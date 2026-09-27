@@ -47,7 +47,7 @@ export function renderHtml(
           <span class="pane-info" id="channels-info"></span>
           <span class="pane-actions">
             <button id="btn-review" class="pane-btn" title="Review: syntax errors + sync-code check">Review</button>
-            <button id="btn-expand-editor" class="pane-btn" title="Toggle the 3D pane">Widen ⤢</button>
+            <button id="btn-expand-editor" class="pane-btn" title="Toggle the plot pane">Widen ⤢</button>
           </span>
         </header>
         <div id="review-panel" hidden></div>
@@ -56,11 +56,11 @@ export function renderHtml(
       <div id="gutter" title="Drag to resize"></div>
       <section id="viewport-pane">
         <header class="pane-header">
-          <span class="pane-title">3D Backplot</span>
+          <span class="pane-title">2D Backplot</span>
           <span class="pane-info" id="viewport-info"></span>
         </header>
         <div id="viewport">
-          <canvas id="scene"></canvas>
+          <canvas id="plot"></canvas>
           <div id="viewport-idle">
             <div class="idle-card">
               <div class="idle-glyph">▤</div>

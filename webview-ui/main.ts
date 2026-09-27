@@ -3,7 +3,7 @@ import './styles.css';
 
 import { onHostMessage, send } from './ipc';
 import { MultiChannelEditor } from './editor/multiChannelEditor';
-import { SceneManager } from './render/sceneManager';
+import { Plot2D } from './render/plot2d';
 import { Animator } from './render/animator';
 import { mountTransport } from './playback/controls';
 import { ConfigPanel } from './config/configPanel';
@@ -48,8 +48,8 @@ function resolvedTexts() {
   }));
 }
 
-const canvas = el<HTMLCanvasElement>('scene');
-const scene = new SceneManager(canvas);
+const canvas = el<HTMLCanvasElement>('plot');
+const plot = new Plot2D(canvas);
 const animator = new Animator();
 
 const editor = new MultiChannelEditor(el('editors'), {
@@ -94,12 +94,12 @@ function rawTexts() {
   }));
 }
 
-/* ---- pane layout (Code + 3D / Code only / 3D only) ---- */
-type Layout = 'split' | 'editor' | '3d';
+/* ---- pane layout (Code + Plot / Code only) ---- */
+type Layout = 'split' | 'editor';
 function readStoredLayout(): Layout {
   try {
     const v = localStorage.getItem('opc.layout');
-    if (v === 'editor' || v === '3d' || v === 'split') return v;
+    if (v === 'editor' || v === 'split') return v;
   } catch {
     /* private mode */
   }
@@ -115,7 +115,7 @@ function setLayout(mode: Layout): void {
   ribbon.setSegment('layout', `layout-${mode}` as RibbonAction);
   el('btn-expand-editor').classList.toggle('on', mode === 'editor');
   requestAnimationFrame(() => {
-    scene.resize();
+    plot.resize();
     editor.layout();
   });
 }
@@ -192,32 +192,14 @@ function onRibbon(a: RibbonAction): void {
     case 'layout-editor':
       setLayout('editor');
       break;
-    case 'layout-3d':
-      setLayout('3d');
-      break;
     case 'view-fit':
-      scene.frameAll();
-      break;
-    case 'view-iso':
-      scene.setView('iso');
-      break;
-    case 'view-top':
-      scene.setView('top');
-      break;
-    case 'view-front':
-      scene.setView('front');
-      break;
-    case 'view-right':
-      scene.setView('right');
+      plot.frameAll();
       break;
     case 'toggle-rapids':
-      scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
+      plot.setRapidsVisible(ribbon.isOn('toggle-rapids'));
       break;
     case 'toggle-grid':
-      scene.setGridVisible(ribbon.isOn('toggle-grid'));
-      break;
-    case 'toggle-machine':
-      scene.setMachineVisible(ribbon.isOn('toggle-machine'));
+      plot.setGridVisible(ribbon.isOn('toggle-grid'));
       break;
     case 'km-swiss':
     case 'km-lathe':
@@ -309,8 +291,8 @@ function runBackplot(): void {
   const full = buildSchedule(program, setup);
   const scoped = applyScope(full);
   schedule = scoped.schedule;
-  scene.setToolpaths(schedule.channels);
-  scene.setRapidsVisible(ribbon.isOn('toggle-rapids'));
+  plot.setToolpaths(schedule.channels);
+  plot.setRapidsVisible(ribbon.isOn('toggle-rapids'));
   animator.setSchedule(schedule);
   animator.seek(0);
 
@@ -332,7 +314,7 @@ function runBackplot(): void {
   backplotActive = true;
   ribbon.setBackplotActive(true);
   el('viewport-idle').hidden = true;
-  scene.resize();
+  plot.resize();
 
   const moves = schedule.channels.reduce((n, c) => n + c.segments.length, 0);
   el('viewport-info').textContent =
@@ -350,7 +332,7 @@ function runBackplot(): void {
 function clearBackplot(): void {
   animator.pause();
   animator.seek(0);
-  scene.clearToolpaths();
+  plot.clearToolpaths();
   schedule = undefined;
   backplotActive = false;
   ribbon.setBackplotActive(false);
@@ -368,13 +350,13 @@ function scheduleLiveRebuild(): void {
 
 /* ---- resize plumbing ---- */
 const ro = new ResizeObserver(() => {
-  scene.resize();
+  plot.resize();
   editor.layout();
 });
 ro.observe(el('viewport'));
 ro.observe(el('editors'));
-window.addEventListener('resize', () => scene.resize());
-scene.resize();
+window.addEventListener('resize', () => plot.resize());
+plot.resize();
 
 /* ---- gutter drag ---- */
 (() => {
@@ -390,7 +372,7 @@ scene.resize();
     const rect = split.getBoundingClientRect();
     const pct = Math.min(0.82, Math.max(0.18, (e.clientX - rect.left) / rect.width));
     split.style.gridTemplateColumns = `${pct * 100}% 6px 1fr`;
-    scene.resize();
+    plot.resize();
     editor.layout();
   });
   gutter.addEventListener('pointerup', () => (dragging = false));
@@ -443,13 +425,13 @@ send({ type: 'ready' });
 function applyTheme(theme: 'light' | 'dark'): void {
   document.body.dataset.theme = theme;
   editor.setTheme(theme);
-  scene.setTheme(theme);
+  plot.setTheme(theme);
 }
 
 const DIALECT_LABEL = { fanuc: 'Fanuc', mitsubishi: 'Mitsubishi', citizen: 'Citizen Cincom' } as const;
 
 function applySetup(): void {
-  scene.setSetup(setup);
+  plot.setSetup(setup);
   const tpl = setup.template ? getTemplate(setup.template) : undefined;
   const km = setup.machine.kinematicsMode === 'swiss-type' ? 'Swiss-type' : 'Standard lathe';
   ribbon.setMode(
@@ -498,32 +480,12 @@ animator.subscribe((frame) => {
     positions.set(ch, { pos: st.pos, waiting: st.waiting });
     highlight.set(ch, { line: st.sourceLine, waiting: st.waiting });
   }
-  scene.updatePlayback(frame.time, positions);
+  plot.updatePlayback(frame.time, positions);
   editor.highlightExecuting(highlight);
-
-  if (schedule) {
-    const mainId = mainChannelId();
-    const mainCh = schedule.channels.find((c) => c.channel === mainId);
-    const st = frame.channels.get(mainId);
-    if (mainCh && st && mainCh.segments[st.segIndex]) {
-      const subCh = schedule.channels.find((c) => channelSpace(setup, c.channel) === 'sub');
-      const subSt = subCh ? frame.channels.get(subCh.channel) : undefined;
-      const subSeg =
-        subCh && subSt && subCh.segments[subSt.segIndex]
-          ? subCh.segments[subSt.segIndex].headstockZ
-          : undefined;
-      scene.setHeadstock(mainCh.segments[st.segIndex].headstockZ, subSeg);
-    }
-  }
 });
 
 function toSubMap(rec: Record<number, string> | undefined): Map<number, string> {
   const m = new Map<number, string>();
   for (const [k, v] of Object.entries(rec ?? {})) m.set(Number(k), v);
   return m;
-}
-
-function mainChannelId(): number {
-  const first = setup.machine.channels.find((c) => channelSpace(setup, c.id) === 'main');
-  return first?.id ?? setup.machine.channels[0]?.id ?? 1;
 }

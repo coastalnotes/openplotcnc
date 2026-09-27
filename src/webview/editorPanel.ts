@@ -34,7 +34,7 @@ export class BackplotterPanel {
   private applyingRemoteEdit = false;
   private editTimer: NodeJS.Timeout | undefined;
   private pendingEdits = new Map<number, string>();
-  private pendingLayout: 'split' | 'editor' | '3d' | undefined;
+  private pendingLayout: 'split' | 'editor' | undefined;
   private readonly diagnostics = vscode.languages.createDiagnosticCollection('openplotcnc');
 
   private constructor(
@@ -140,7 +140,7 @@ export class BackplotterPanel {
     await this.reload();
   }
 
-  setLayout(layout: 'split' | 'editor' | '3d'): void {
+  setLayout(layout: 'split' | 'editor'): void {
     this.pendingLayout = layout;
     this.post({ type: 'setLayout', layout });
   }

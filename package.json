@@ -1,7 +1,7 @@
 {
   "name": "openplotcnc",
   "displayName": "OpenPlotCNC — Multi-Channel Backplotter",
-  "description": "Multi-channel G-code editor and 3D backplotter for Fanuc & Mitsubishi turning and Swiss-type CNC machines.",
+  "description": "Multi-channel G-code editor and 2D backplotter for Fanuc & Mitsubishi turning and Swiss-type CNC machines.",
   "version": "0.1.0",
   "publisher": "openplotcnc",
   "license": "MIT",
@@ -251,7 +251,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@types/three": "^0.171.0",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
@@ -262,7 +261,6 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "monaco-editor": "^0.52.2",
-    "three": "^0.171.0"
+    "monaco-editor": "^0.52.2"
   }
 }

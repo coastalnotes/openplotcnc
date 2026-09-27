@@ -18,10 +18,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `$0` common/variable section aside, and expands `M98 P####` / `M98 H####`
   subprograms into the backplot.
 - Dialect- and machine-aware in-app help / reference panel.
-- Manual backplot: the 3D simulation builds on demand instead of on open.
+- Manual backplot: the 2D plot builds on demand instead of on open.
 
 ### Changed
 
+- Replaced the Three.js 3D viewport with a lightweight 2D Z–X turning-plane
+  canvas plot (feed solid, rapids dashed, per-channel progress + tool markers,
+  centreline + guide-bushing marker, Fit / Rapids / Grid controls). The
+  `three` dependency is gone.
 - `.PRG`/`.prg` and other controller extensions register as G-code.
 - `dist/` is cleaned before packaging (no sourcemaps in the VSIX).
 

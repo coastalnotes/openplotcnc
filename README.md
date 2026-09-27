@@ -1,7 +1,7 @@
 # OpenPlotCNC — Multi-Channel Backplotter
 
 An open-source VS Code extension providing a **multi-channel G-code editor** and a
-**3D backplotter** for **Fanuc** and **Mitsubishi** turning and **Swiss-type**
+**2D backplotter** for **Fanuc** and **Mitsubishi** turning and **Swiss-type**
 CNC machines. Runs on Windows, macOS and Linux.
 
 ![status](https://github.com/coastalnotes/openplotcnc/actions/workflows/ci.yml/badge.svg)
@@ -16,8 +16,8 @@ CNC machines. Runs on Windows, macOS and Linux.
   program, see the channels it splits into, load a machine, open the backplotter.
 - **Fusion 360-style ribbon** — Home / Simulate / View / Setup / Help tabs with
   large labelled buttons. Built for machinists, not VS Code power users.
-- **Backplot is manual** — the editor + alignment show immediately; the 3D
-  simulation builds only when you press *Run Backplot*.
+- **Backplot is manual** — the editor + alignment show immediately; the 2D
+  plot builds only when you press *Run Backplot*.
 
 ### Machine templates
 
@@ -78,12 +78,11 @@ the loaded template.
   the sub frame mirrored about the pickup plane.
 - Standard-lathe mode keeps the headstock fixed.
 
-### 3D viewport (Three.js)
+### 2D backplot (Z–X turning plane)
 
-- Main spindle, sub spindle, guide bushing, bar stock and per-channel toolpaths.
 - Colour-coded channels — Path 1 cyan, Path 2 amber, Path 3 magenta, Path 4 green.
 - Rapids drawn dashed, feed moves solid; true arc geometry (not chords).
-- Orbit controls, grid, coordinate gizmo, fit-view.
+- Spindle centreline, guide-bushing marker, grid, fit-view.
 
 ### Time-synchronized playback
 
